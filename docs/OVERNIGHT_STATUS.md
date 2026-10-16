@@ -1,10 +1,11 @@
 # Overnight status and morning handover (Oct 16 → 17)
 
-**State: Gate 1 passed. M2 and M3 done, committed and pushed. Stopped here (M4 not started).**
+**State: Gate 1 passed. M2, M3 and (on your later go-ahead) M4 are done, committed and pushed. Stopped before M5.**
 
 ## Commits
 - `04d9bf1` M2: world generator, loader and schema
 - `0f86421` M3: exposure, tier-1 view and shortage projection
+- (see `git log`) M4: true capacity (max-flow, min cut) and alternatives
 
 ## What was checked (all on this machine, PowerShell + Git Bash)
 - `make up`: FalkorDB healthy.
@@ -49,5 +50,32 @@ Then in FalkorDB Browser (http://localhost:3000), graph `world:live`:
 2. PowerCell gets 70% of its cells from VoltCell and 30% from Hanriver, so its availability is 30%. If PowerCell also needed a BMS controller from a healthy supplier, what would its availability be, and why is it the minimum and not an average?
 3. Guadalajara and Penang both buy BAT-6S from BatteryMax, which is 100% VoltCell. Why is Guadalajara "exposed but covered" while Penang runs out on day 11? Name the two properties in the graph that make the difference.
 
+## M4 (done after you said to keep going)
+- `make test`: **44 passed** (9 new M4 tests: the docs example = 13, a network where every edge is saturated but only one is the min cut, the tiny world, Monsoon, Panel Fire, and scratch-graph cleanup).
+- `make cli SCENARIO=monsoon` now also prints:
+  - BAT-4S → Bac Ninh: naive **1,900/wk vs true 700/wk**. Bottleneck: Hanriver → PowerCell cell line (400) + Kanto spare (300) + VoltCell (0).
+  - BAT-6S → Penang: naive 980 vs **true 650**. BAT-6S → Guadalajara: true 0 (no alternates in the graph).
+  - **AmpereOne REJECTED**: no remaining clean capacity, path `S-VOLT-AYU -> S-AMPR-JHB`.
+  - PowerCell extra ACCEPTED with an exposure warning, reduced to 400/wk clean of 900. Kanto accepted clean.
+- `make cli SCENARIO=panel_fire`: Brightvale accepted, Novaglass REJECTED as incompatible (DSP-14-HB isn't approved for KB14).
+- Deviation: the naive BAT-6S figure is 980 (per plant), not §5.6's "≈1,450". See DECISIONS.
+
+### Node splitting and min cut, in one picture (BAT-4S → Bac Ninh after the flood)
+```
+             (site's own capacity, in packs/wk)
+VoltCell:in --0--> VoltCell:out --700--> PowerCell:in --900--> PowerCell:out --900--> PLANT
+                              \--700--> AmpereOne:in --700--> AmpereOne:out --700--/
+Hanriver:in --1000-> Hanriver:out --400--> PowerCell:in            (1600 cells / 4)
+KantoC:in  --600--> KantoC:out  --600--> KantoP:in --600--> KantoP:out --300--> PLANT
+```
+- Splitting every site into `in -> out` turns "VoltCell can only make so much" into an edge capacity. VoltCell's own edge is 0 after the flood, and both PowerCell and AmpereOne lose that input together.
+- Max flow = 400 (Hanriver line) + 300 (Kanto spare) = **700**.
+- Min cut: from the sources, follow edges that still have room. You reach VoltCell:in, Hanriver:in/out, KantoC and KantoP:in/out. The edges leaving that set are VoltCell's own edge (0), Hanriver→PowerCell (400) and KantoP→PLANT (300). Their sum, 700, equals the max flow, which proves this is the bottleneck.
+
+### M4 learning questions
+1. Why does each site become two nodes (`in`/`out`)? What would max-flow get wrong for VoltCell without that?
+2. Why does the engine compute the min cut itself from residual reachability instead of taking "edges with flow = capacity"? (See `test_saturated_edges_are_not_all_bottlenecks`.)
+3. AmpereOne and PowerCell are both downstream of VoltCell. Why is one rejected and the other accepted?
+
 ## Next step (when you're back)
-- M4: true capacity (max-flow on a scratch graph, min cut) and alternatives (AmpereOne rejected with its path). See START_HERE.md M4.
+- M5: greedy allocator (naive vs graph-aware), GRAPH.COPY sandboxes with joint rationing, executor, verifier. See START_HERE.md M5.

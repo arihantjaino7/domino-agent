@@ -11,6 +11,8 @@ import argparse
 import sys
 
 from domino.config import settings
+from domino.engines.alternatives import find_alternatives
+from domino.engines.capacity import compute_true_capacity
 from domino.engines.exposure import trace_exposure
 from domino.engines.incident import declare_incident
 from domino.engines.shortage import project_shortages
@@ -97,6 +99,41 @@ def run(scenario: str) -> int:
             flag = "  STRATEGIC" if o["tier"] == "strategic" else ""
             print(f"     {o['order_id']} {o['plant']} {o['product']} x{o['qty']}  need day {o['need_day']}, "
                   f"{when}, {o['late_days']}d late{flag}")
+    print()
+
+    reduced = [(c["component"], c["plant"]) for c in short["components"] if c["reduced"]]
+    print("4. True capacity (algo.maxFlow on a scratch graph; min cut from residual reachability)")
+    for comp, plant in reduced:
+        cap = compute_true_capacity(graph, comp, plant, run_id="cli")
+        print(f"   {comp} -> {plant}: naive {cap['naive_wk']}/wk (tier-1 contracts + approved spare)  vs  "
+              f"true {cap['true_wk']}/wk  (healthy network {cap['nominal_wk']}/wk)")
+        for b in cap["bottleneck"]:
+            print(f"     bottleneck: {b['what']} ({b['cap']}/wk)")
+        for w in cap["warnings"]:
+            print(f"     note: {w}")
+    print()
+
+    print("5. Alternatives (exposure is a warning; rejection only when remaining clean capacity is 0)")
+    for comp, plant in reduced:
+        alts = find_alternatives(graph, comp, plant, HORIZON, run_id="cli")
+        print(f"   {comp} -> {plant}:")
+        for a in alts["accepted"]:
+            notes = []
+            if a["exposure_warning"]:
+                notes.append("EXPOSED via " + "; ".join(" -> ".join(p) for p in a["tainted_paths"]))
+            if a["reduced"]:
+                notes.append(f"reduced: site clean {a['site_clean_wk']}/wk of {a['site_nominal_wk']}/wk")
+            if a["shares_site_with_contract_wk"]:
+                notes.append(f"shares the site with a {a['shares_site_with_contract_wk']}/wk contract")
+            print(f"     ACCEPT {a['site']} {a['component']} {_usd(a['price_cents'])}/unit, usable "
+                  f"{a['usable_wk']}/wk, lead {a['lead_days']}d + {a['transit_days']}d sea "
+                  f"/ {a['air_transit_days']}d air" + (f"  [{'; '.join(notes)}]" if notes else ""))
+        for r in alts["rejected"]:
+            ev = ("  path: " + "; ".join(" -> ".join(p) for p in r["tainted_paths"])) if r["tainted_paths"] else ""
+            print(f"     REJECT {r['site']} {r['component']} {_usd(r['price_cents'])}/unit: {r['reason']} "
+                  f"({r['detail']}){ev}")
+        if not alts["accepted"] and not alts["rejected"]:
+            print("     no approved alternate sources in the graph")
     return 0
 
 
