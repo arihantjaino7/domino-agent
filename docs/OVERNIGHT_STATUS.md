@@ -5,7 +5,7 @@
 ## Commits
 - `04d9bf1` M2: world generator, loader and schema
 - `0f86421` M3: exposure, tier-1 view and shortage projection
-- (see `git log`) M4: true capacity (max-flow, min cut) and alternatives
+- `c604e91` M4: true capacity (max-flow, min cut) and alternatives
 
 ## What was checked (all on this machine, PowerShell + Git Bash)
 - `make up`: FalkorDB healthy.
