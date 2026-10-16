@@ -28,8 +28,8 @@ SCENARIO ?= monsoon
 cli: ## M3: make cli SCENARIO=monsoon (or panel_fire)
 	cd backend && uv run python -m domino.cli $(SCENARIO)
 
-demo-headless: ## M7: make demo-headless SCENARIO=monsoon
-	$(error make demo-headless is not built yet - milestone M7)
+demo-headless: ## M6: make demo-headless SCENARIO=monsoon [DRY_RUN=1 for the free scripted check]
+	cd backend && uv run python -m domino.agent.headless $(SCENARIO) $(if $(DRY_RUN),--dry-run,)
 
 eval: ## M10
 	$(error make eval is not built yet - milestone M10)

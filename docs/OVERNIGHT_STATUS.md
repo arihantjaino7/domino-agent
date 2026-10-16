@@ -1,6 +1,6 @@
 # Overnight status and morning handover (Oct 16 → 17)
 
-**State: Gate 1 passed. M2, M3, M4 and M5 are done, committed and pushed (M4/M5 after your go-ahead).**
+**State: M2-M5 done and verified. M6 is built and tested with a free scripted model; the real Claude run is NOT tried yet (it costs API credit). All committed and pushed.**
 
 ## Commits
 - `04d9bf1` M2: world generator, loader and schema
@@ -100,5 +100,28 @@ KantoC:in  --600--> KantoC:out  --600--> KantoP:in --600--> KantoP:out --300--> 
 2. Why does an order that can only be partly covered get rolled back instead of keeping a partial allocation?
 3. Q-EXECUTE checks `world_version` inside the write query, not only before it. What race does that close?
 
+## M6 (MCP tools, agent loop, approval, memory)
+- 15 tools over MCP (fixed catalogue, no Cypher tool, `execute_plan` not exposed, every id checked against the graph). They're served at `/mcp` over HTTP, and the agent uses the same server in-process.
+- Manual agent loop (`agent/loop.py`, settings from the claude-api skill): pause on `submit_plan_for_approval`, then human approve/reject. Only the executor commits, after which the agent verifies and reports. Events go out over SSE with Last-Event-ID, and run JSON is saved in `backend/runs/`.
+- The report is validated: invented evidence ids, unresolved metric refs and entity ids that no tool returned are all rejected, and the agent must fix and resubmit.
+- Memory: lessons go to the `memory` graph with `learned_on` dates, and `recall_history` returns them.
+- `make test`: **71 passed** (8 new M6 tests, all using the scripted model, $0).
+- **Free plumbing check (verified):**
+  ```
+  make demo-headless SCENARIO=monsoon DRY_RUN=1
+  make demo-headless SCENARIO=non_event DRY_RUN=1
+  ```
+  Monsoon goes through 15 tool calls, approval, +4 POs, V1-V9 pass, and an accepted report. The non-event gives outcome `not_in_graph` ("not the same as safe"), with no incident declared.
+- **Not verified: the real model.** To try it (this costs API credit, so set a spend limit first):
+  ```
+  make demo-headless SCENARIO=monsoon
+  ```
+  It prints the tokens and $ cost at the end. Things to watch: does it call `submit_incident_report`, and does the report pass validation?
+
+### M6 learning questions
+1. Why is `execute_plan` not a tool the model can call, and what makes approval safe against a stale plan? (Hint: plan_hash plus world_version.)
+2. The agent cites `R-04.totals.projected_late` instead of writing "13 orders". What does the server do with that reference, and why does it matter for judges?
+3. For the Antwerp alert, why must the answer be "not in the graph" and not "no impact"?
+
 ## Next step (when you're back)
-- M6: MCP tools + Claude agent loop + approval. It needs the Anthropic API (paid), so it was not run overnight.
+- Run the real model once (`make demo-headless SCENARIO=monsoon`) and check the cost and the report. Then M7: deploy the skeleton.
