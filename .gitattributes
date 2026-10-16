@@ -1,0 +1,6 @@
+# Keep LF line endings everywhere (shell scripts, Makefile and Docker files break with CRLF)
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.gif binary
+*.mp4 binary
