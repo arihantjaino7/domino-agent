@@ -5,3 +5,4 @@ The hackathon rules require disclosing AI assistance. This file is kept up to da
 - **Tool:** Claude Code (Anthropic), working from the plan in `docs/PLAN.md` and the rules in `CLAUDE.md`.
 - **Planning:** `docs/PLAN.md` was written before the event started, as planning notes (allowed by rule 8). All code was written after Oct 15 00:01 IST.
 - **M1 (scaffold + capability spike):** Claude Code generated the repo skeleton (backend, frontend placeholder, compose, Makefile) and `scripts/spike.py`. The author reviewed the spike results in `docs/SPIKE.md` and the decisions in `docs/DECISIONS.md`.
+- **M2 (world generator, loader, schema):** Claude Code wrote `seed/` (catalog, motifs, generator), `graph/run_query.py`, `graph/schema.py`, `graph/lifecycle.py`, the `queries/` files and the tests. It followed the motif design tables in PLAN §5.6 and §5.8, which the author wrote before the event. The author reviews the motif numbers and the decisions in `docs/DECISIONS.md`.

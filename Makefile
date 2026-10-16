@@ -12,8 +12,8 @@ up: ## start FalkorDB and wait until it answers PING
 down:
 	docker compose down
 
-seed: ## M2
-	$(error make seed is not built yet - milestone M2)
+seed: ## M2: generate from WORLD_SEED, build world:pristine, GRAPH.COPY to world:live
+	cd backend && uv run python -m domino.seed
 
 test:
 	cd backend && uv run pytest
