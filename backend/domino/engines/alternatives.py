@@ -41,7 +41,7 @@ def find_alternatives(graph: str, component_id: str, plant_id: str, horizon: int
     for r in rows:
         paths = [p for p in r["tainted_paths"] if p]
         base = {"site": r["site"], "component": r["component"], "price_cents": r["price_cents"],
-                "spare_wk": r["spare_wk"], "lead_days": r["lead_days"], "transit_days": r["transit_days"],
+                "spare_wk": r["spare_wk"], "reserved_wk": r["reserved_wk"], "lead_days": r["lead_days"], "transit_days": r["transit_days"],
                 "air_transit_days": r["air_transit_days"], "air_surcharge_cents": r["air_surcharge_cents"],
                 "moq": r["moq"], "tainted_paths": paths}
         if r["component"] not in accepts:
@@ -58,7 +58,7 @@ def find_alternatives(graph: str, component_id: str, plant_id: str, horizon: int
             rejected.append({**base, "reason": "site_disrupted", "detail": f"{r['site']} is itself disrupted"})
             continue
         site_cap = capacity[r["component"]][r["site"]]
-        clean = min(r["spare_wk"], site_cap["site_clean_wk"])
+        clean = min(r["spare_wk"] - r["reserved_wk"], site_cap["site_clean_wk"])
         if clean <= 0:
             rejected.append({**base, "reason": "no_remaining_capacity", "remaining_clean_wk": 0,
                              "nominal_wk": min(r["spare_wk"], site_cap["site_nominal_wk"]),

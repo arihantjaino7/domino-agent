@@ -1,6 +1,6 @@
 # Overnight status and morning handover (Oct 16 → 17)
 
-**State: Gate 1 passed. M2, M3 and (on your later go-ahead) M4 are done, committed and pushed. Stopped before M5.**
+**State: Gate 1 passed. M2, M3, M4 and M5 are done, committed and pushed (M4/M5 after your go-ahead).**
 
 ## Commits
 - `04d9bf1` M2: world generator, loader and schema
@@ -77,5 +77,28 @@ KantoC:in  --600--> KantoC:out  --600--> KantoP:in --600--> KantoP:out --300--> 
 2. Why does the engine compute the min cut itself from residual reachability instead of taking "edges with flow = capacity"? (See `test_saturated_edges_are_not_all_bottlenecks`.)
 3. AmpereOne and PowerCell are both downstream of VoltCell. Why is one rejected and the other accepted?
 
+## M5 (allocator, sandboxes, executor, verifier)
+- `make test`: **63 passed** (19 new: allocator unit tests, sandbox comparison, execute-twice, approval/stale-world, preflight, and **negative tests where V1-V9 must each catch a bad plan**).
+- `make cli SCENARIO=monsoon` sections 6-7:
+
+| strategy | on time | late | penalty | spend | protected | protected but late | rate planned/realized | verify |
+|---|---|---|---|---|---|---|---|---|
+| S0 Do nothing | 104/117 | 13 | $536,370 | $0 | 0 | 0 | - | pass |
+| S1 Naive baseline | 110/117 | 7 | $417,610 | $108,169 | 11 | **5** | **638/286** | **FAIL V3, V8** |
+| S2 Lowest cost | 114/117 | 3 | $370,360 | $114,982 | 10 | 0 | 692/692 | pass |
+| S3 Max service | 116/117 | 1 | $105,000 | $162,569 | 12 | 0 | 554/554 | pass |
+| ★ S4 DOMINO | 116/117 | 1 | $105,000 | $142,475 | 12 | 0 | 779/779 | pass |
+
+  - Net benefit (S4): spend $142,475 -> avoid $431,370 in penalties -> **net $288,895**. Revenue protected: $3.8M.
+  - Executing S4 gives "+4 PurchaseOrder, +19 PROTECTS, 12 orders -> protected (projected)". All of V1-V9 pass, and **executing again creates 0 POs**.
+  - The one order still late is Penang's SO-1031 (need day 11). No source can arrive with enough units by then.
+  - Kanto's POs (225 4S + 250 6S packs = 2,400 cells/wk) use exactly its shared cell line. That's the upstream bookkeeping working.
+- **Known issue:** Panel Fire's net benefit is −$44,500. The allocator buys each late order's full quantity, not just the deficit, so it over-buys on a short outage. Logged in DECISIONS as deferred.
+
+### M5 learning questions
+1. The naive baseline "protects" 11 orders, but 5 are still late in its sandbox. Which graph fact causes that, and which two invariants catch it?
+2. Why does an order that can only be partly covered get rolled back instead of keeping a partial allocation?
+3. Q-EXECUTE checks `world_version` inside the write query, not only before it. What race does that close?
+
 ## Next step (when you're back)
-- M5: greedy allocator (naive vs graph-aware), GRAPH.COPY sandboxes with joint rationing, executor, verifier. See START_HERE.md M5.
+- M6: MCP tools + Claude agent loop + approval. It needs the Anthropic API (paid), so it was not run overnight.

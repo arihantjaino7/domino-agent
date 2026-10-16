@@ -13,7 +13,10 @@ import sys
 from domino.config import settings
 from domino.engines.alternatives import find_alternatives
 from domino.engines.capacity import compute_true_capacity
+from domino.engines.executor import approve_decision, execute_plan, propose_decision
 from domino.engines.exposure import trace_exposure
+from domino.engines.sandbox import simulate_strategies
+from domino.engines.verifier import verify_execution
 from domino.engines.incident import declare_incident
 from domino.engines.shortage import project_shortages
 from domino.graph.lifecycle import copy_graph
@@ -134,6 +137,54 @@ def run(scenario: str) -> int:
                   f"({r['detail']}){ev}")
         if not alts["accepted"] and not alts["rejected"]:
             print("     no approved alternate sources in the graph")
+    print()
+
+    sim = simulate_strategies(graph, inc["id"], run_id="cli", horizon=HORIZON)
+    print(f"6. Strategies compared in GRAPH.COPY sandboxes (same executor; joint upstream rationing; "
+          f"budget {_usd(sim['budget_cents'])})")
+    print(f"   {'':3}{'strategy':<17}{'on time':>9}{'late':>6}{'days late':>11}{'penalty':>11}{'spend':>10}"
+          f"{'protected':>11}{'prot. but late':>16}{'rate plan/real':>16}  verify")
+    for r in sim["strategies"]:
+        star = "★" if r["strategy"] == sim["recommended"] else " "
+        rate = f"{r['planned_rate_wk']}/{r['realized_rate_wk']}" if r["planned_rate_wk"] else "-"
+        ver = "all pass" if r["verification"]["ok"] else "FAIL " + ",".join(r["verification"]["failed"])
+        print(f"   {star} {r['strategy']} {r['name']:<14}{r['on_time']:>5}/{r['orders']:<3}{r['late']:>6}"
+              f"{r['days_late']:>11}{_usd(r['penalty_cents']):>11}{_usd(r['spend_cents']):>10}"
+              f"{r['protected_projected']:>11}{len(r['protected_but_late']):>16}{rate:>16}  {ver}")
+    best = next(r for r in sim["strategies"] if r["strategy"] == sim["recommended"])
+    print(f"   net benefit ({best['strategy']}): spend {_usd(best['spend_cents'])} -> avoid "
+          f"{_usd(best['avoided_penalty_cents'])} in late penalties and protect "
+          f"{_usd(best['revenue_protected_cents'])} of revenue -> net {_usd(best['net_benefit_cents'])}")
+    base = next((r for r in sim["strategies"] if r["strategy"] == "S1"), None)
+    if base and base["protected_but_late"]:
+        print(f"   baseline shortfall: it promised {base['protected_projected']} orders, but "
+              f"{len(base['protected_but_late'])} are still late once upstream capacity is shared "
+              f"({base['planned_rate_wk']}/wk planned, {base['realized_rate_wk']}/wk realized)")
+    print()
+
+    plan = sim["plans"].get(sim["recommended"])
+    if not plan or not plan["pos"]:
+        print("7. Nothing to execute.")
+        return 0
+    print(f"7. Execute {plan['strategy']} on {graph} (approval: cli, automatic for this check)")
+    propose_decision(graph, inc["id"], plan, rationale=plan["name"])
+    print(f"   approve: {approve_decision(graph, plan, approved_by='cli')['outcome']}  "
+          f"(plan_hash {plan['plan_hash']}, world v{plan['world_version']})")
+    receipt = execute_plan(graph, plan)
+    print(f"   receipt: {receipt.get('summary', receipt['outcome'])}  "
+          f"(matches plan: {receipt.get('receipt_matches_plan')})")
+    for p in plan["pos"]:
+        print(f"     {p['id']}: {p['site_id']} {p['component_id']} -> {p['plant_id']} {p['rate_wk']}/wk x "
+              f"{p['qty']} by {p['mode']}, first arrival day {p['first_arrival_day']}, "
+              f"{len(p['allocations'])} orders")
+    ver = verify_execution(graph, plan, receipt, run_id="cli")
+    for c in ver["checks"]:
+        print(f"   {'✓' if c['ok'] else '✗'} {c['id']} {c['name']}" + ("" if c["ok"] else f": {c['violations'][:2]}"))
+    again = execute_plan(graph, plan)
+    print(f"   execute again: {again['outcome']}, {again.get('pos_created', 0)} new purchase orders")
+    after = project_shortages(graph, HORIZON)["totals"]
+    print(f"   after execution: {after['orders'] - after['projected_late']}/{after['orders']} orders on time "
+          f"(protected = projected; POs committed, parts not yet received)")
     return 0
 
 

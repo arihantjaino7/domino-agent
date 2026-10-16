@@ -18,11 +18,13 @@ is the latest `disrupted_until` among the reduced sources (§7.5 pipeline rule).
 
 from __future__ import annotations
 
+import copy
 import math
 from dataclasses import dataclass
 from fractions import Fraction
 from typing import Any
 
+from domino.engines.upstream import load_upstream, realized_rates
 from domino.graph.run_query import run_query
 
 DEFAULT_HORIZON = 42
@@ -44,8 +46,21 @@ def fetch_inputs(graph: str, horizon: int = DEFAULT_HORIZON) -> dict[str, Any]:
     feeds = run_query("shortage/upstream_feeds", graph=graph)
     site_ids = sorted({r["site"] for r in supply} | {f["src"] for f in feeds} | {f["dst"] for f in feeds})
     sites = run_query("shortage/sites", {"site_ids": site_ids}, graph=graph)
+    # Committed purchase orders arrive at the rate the upstream can really support (joint rationing).
+    pos = run_query("upstream/purchase_orders", graph=graph)
+    if pos:
+        up = load_upstream(graph, [p["site"] for p in pos], [p["component"] for p in pos])
+        real = realized_rates(up, [{"id": p["po_id"], "site": p["site"], "component": p["component"],
+                                    "rate_wk": p["rate_wk"]} for p in pos])
+        alloc: dict[str, list[dict[str, Any]]] = {}
+        for a in run_query("upstream/protects", graph=graph):
+            alloc.setdefault(a["po_id"], []).append({"order_id": a["order_id"], "qty": a["qty"]})
+        for p in pos:
+            p["realized_rate_wk"] = real[p["po_id"]]
+            p["allocations"] = alloc.get(p["po_id"], [])
     return {
         "horizon": horizon,
+        "pos": pos,
         "sites": {s["site"]: s for s in sites},
         "feeds": feeds,
         "supply": supply,
@@ -130,7 +145,16 @@ def _daily_rate(used_wk: int, avail: Availability, transit: int, day: int) -> Fr
     return Fraction(used_wk, 7) * factor
 
 
+def _po_cumulative(po: dict[str, Any], day: int) -> int:
+    """Units of a purchase order delivered by the end of `day`, at its realized rate, capped at its qty."""
+    days = day - po["first_arrival_day"] + 1
+    if days <= 0:
+        return 0
+    return min(po["qty"], po.get("realized_rate_wk", po["rate_wk"]) * days // 7)
+
+
 def project(inputs: dict[str, Any]) -> dict[str, Any]:
+    inputs = copy.deepcopy(inputs)  # the simulation tracks deliveries on the PO rows
     horizon = inputs["horizon"]
     avail = site_availability(inputs["sites"], inputs["feeds"])
 
@@ -149,7 +173,10 @@ def project(inputs: dict[str, Any]) -> dict[str, Any]:
             "value_cents": r["value_cents"], "needs": {}})
         o["needs"][r["component"]] = o["needs"].get(r["component"], 0) + r["units"]
 
-    keys = sorted({(o["plant"], k) for o in orders.values() for k in o["needs"]} | set(edges))
+    pos_by_key: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    for p in inputs.get("pos", []):
+        pos_by_key.setdefault((p["plant"], p["component"]), []).append(p)
+    keys = sorted({(o["plant"], k) for o in orders.values() for k in o["needs"]} | set(edges) | set(pos_by_key))
     stock = {k: 0 for k in keys}
     for s in inputs["stock"]:
         if (s["plant"], s["component"]) in stock:
@@ -162,6 +189,7 @@ def project(inputs: dict[str, Any]) -> dict[str, Any]:
         o["ready_day"] = None
 
     cum: dict[tuple[str, str], Fraction] = {k: Fraction(0) for k in keys}
+    earmark: dict[tuple[str, str], int] = {}  # (order, component) -> PO units delivered for that order
     stockout: dict[tuple[str, str], int] = {}
     curve: dict[tuple[str, str], list[int]] = {k: [] for k in keys}
     queue = sorted(orders.values(), key=lambda o: (o["need_day"], o["tier"] != "strategic", o["order_id"]))
@@ -172,16 +200,29 @@ def project(inputs: dict[str, Any]) -> dict[str, Any]:
             cum[k] += sum((_daily_rate(e["used_wk"], e["avail"], e["transit_days"], day) for e in edges.get(k, [])),
                           Fraction(0))
             stock[k] += math.floor(cum[k]) - math.floor(before)
+            for p in pos_by_key.get(k, []):  # purchase orders: from first arrival, until qty is delivered
+                units = _po_cumulative(p, day) - _po_cumulative(p, day - 1)
+                for a in p.get("allocations", []):  # PROTECTS units are earmarked for their order first
+                    owed = a["qty"] - a.setdefault("delivered", 0)
+                    take = min(units, owed)
+                    if take > 0:
+                        a["delivered"] += take
+                        earmark[(a["order_id"], k[1])] = earmark.get((a["order_id"], k[1]), 0) + take
+                        units -= take
+                stock[k] += units
         for o in queue:  # earliest need day first, strategic first, then id; backlog included
             if o["ready_day"] is not None or o["need_day"] > day:
                 continue
-            short = [c for c, u in o["needs"].items() if stock[(o["plant"], c)] < u]
+            short = [c for c, u in o["needs"].items()
+                     if earmark.get((o["order_id"], c), 0) + stock[(o["plant"], c)] < u]
             if short:
                 for c in short:
                     stockout.setdefault((o["plant"], c), day)
                 continue
             for c, u in o["needs"].items():
-                stock[(o["plant"], c)] -= u
+                mine = min(u, earmark.get((o["order_id"], c), 0))
+                earmark[(o["order_id"], c)] = earmark.get((o["order_id"], c), 0) - mine
+                stock[(o["plant"], c)] -= u - mine
             o["ready_day"] = day
         for k in keys:
             curve[k].append(stock[k])
@@ -196,6 +237,7 @@ def project(inputs: dict[str, Any]) -> dict[str, Any]:
             "qty": o["qty"], "customer": o["customer"], "tier": o["tier"], "exposed": o["exposed"],
             "ready_day": o["ready_day"], "late_days": late, "beyond_horizon": beyond, "status": status,
             "value_cents": o["value_cents"], "penalty_cents": late * o["penalty_cents"],
+            "penalty_per_day_cents": o["penalty_cents"], "needs": dict(sorted(o["needs"].items())),
         })
 
     components = []
@@ -219,6 +261,9 @@ def project(inputs: dict[str, Any]) -> dict[str, Any]:
     late = [o for o in out_orders if o["status"] == "projected_late"]
     return {
         "horizon": horizon,
+        "pos": [{"po_id": p["po_id"], "site": p["site"], "component": p["component"], "plant": p["plant"],
+                 "rate_wk": p["rate_wk"], "realized_rate_wk": p.get("realized_rate_wk", p["rate_wk"])}
+                for p in inputs.get("pos", [])],
         "orders": out_orders,
         "components": components,
         "plants": plants,
