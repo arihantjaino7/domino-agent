@@ -4,7 +4,7 @@
 
 ## Commits
 - `04d9bf1` M2: world generator, loader and schema
-- (next commit) M3: exposure, tier-1 view and shortage projection
+- `0f86421` M3: exposure, tier-1 view and shortage projection
 
 ## What was checked (all on this machine, PowerShell + Git Bash)
 - `make up`: FalkorDB healthy.
