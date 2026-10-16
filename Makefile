@@ -24,8 +24,9 @@ dev: ## backend :8000 + frontend :5173
 api: ## backend only
 	cd backend && uv run uvicorn domino.api.main:app --reload --host 127.0.0.1 --port 8000
 
-cli: ## M3: make cli SCENARIO=monsoon
-	$(error make cli is not built yet - milestone M3)
+SCENARIO ?= monsoon
+cli: ## M3: make cli SCENARIO=monsoon (or panel_fire)
+	cd backend && uv run python -m domino.cli $(SCENARIO)
 
 demo-headless: ## M7: make demo-headless SCENARIO=monsoon
 	$(error make demo-headless is not built yet - milestone M7)
