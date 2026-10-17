@@ -35,6 +35,8 @@ class RunContext:
     pending: dict[str, Any] | None = None                                # plan awaiting approval
     receipt: dict[str, Any] | None = None
     report: dict[str, Any] | None = None
+    rejected: dict[str, str] = field(default_factory=dict)              # decision id -> human feedback
+    memory_graph: str = field(default_factory=lambda: settings.memory_graph)  # scripted runs use memory:dryrun
     seen_ids: set[str] = field(default_factory=set)
     lock: threading.Lock = field(default_factory=threading.Lock)
 

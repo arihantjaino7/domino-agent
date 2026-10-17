@@ -16,6 +16,7 @@ from mcp.client.client import Client
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
+from domino.agent import external
 from domino.agent.context import get_context
 from domino.agent.loop import AgentRun, approve, new_run, reject, run_phase
 from domino.agent.scenarios import SCENARIOS
@@ -24,9 +25,8 @@ from domino.graph.lifecycle import reset_live
 from domino.mcp.server import mcp
 
 router = APIRouter(prefix="/api")
-RUNS: dict[str, AgentRun] = {}
+RUNS = external.RUNS  # DOMINO's own runs and the external (MCP client) run share one registry
 CLIENTS: dict[str, Any] = {}
-_signals: dict[str, asyncio.Event] = {}
 _tasks: set[asyncio.Task] = set()
 _live_by_ip: dict[str, deque[float]] = {}
 _live_all: deque[float] = deque()
@@ -104,7 +104,17 @@ async def scenarios() -> dict:
 @router.post("/world/reset")
 async def world_reset() -> dict:
     live = await asyncio.to_thread(reset_live)
+    if external.EXTERNAL_ID in RUNS:
+        external.reset_external()
     return {"graph": live, "status": "reset from pristine"}
+
+
+@router.post("/external/watch")
+async def watch_external() -> dict:
+    """Reset the live world and open a fresh external run for an MCP client (Claude Code) to drive."""
+    await asyncio.to_thread(reset_live)
+    run = external.reset_external()
+    return {"run_id": run.id, "graph": run.graph}
 
 
 @router.post("/runs")
@@ -118,10 +128,10 @@ async def start_run(body: StartRun, request: Request) -> dict:
     client = _client(scenario, body.dry_run)
     if not body.dry_run:
         _check_live_quota(request.client.host if request.client else "unknown")
-    run = new_run(scenario, alert, settings.world_graph_live, budget_cents=(body.budget_usd or 0) * 100 or None)
-    RUNS[run.id], CLIENTS[run.id] = run, client
-    signal = _signals[run.id] = asyncio.Event()
-    run.listeners.append(lambda ev: signal.set())
+    run = new_run(scenario, alert, settings.world_graph_live, budget_cents=(body.budget_usd or 0) * 100 or None,
+                  scripted=body.dry_run)
+    external.register(run)
+    CLIENTS[run.id] = client
     from domino.agent.loop import emit
     emit(run, "run.started", {"scenario": scenario, "alert": alert, "dry_run": body.dry_run,
                               "model": "scripted" if body.dry_run else settings.domino_model})
@@ -155,7 +165,7 @@ async def run_events(run_id: str, request: Request) -> EventSourceResponse:
                 return
             if await request.is_disconnected():
                 return
-            signal = _signals.setdefault(run_id, asyncio.Event())
+            signal = external.signal(run_id)
             signal.clear()
             try:
                 await asyncio.wait_for(signal.wait(), timeout=15)
@@ -179,6 +189,12 @@ async def approve_run(run_id: str, body: Approval) -> dict:
     if body.decision_id and body.decision_id != pending["decision_id"]:
         raise HTTPException(409, f"pending decision is {pending['decision_id']}")
     run.status = "approving"  # a second click now gets 409 instead of a second execution
+    if run_id == external.EXTERNAL_ID:  # the external client is the agent; only the executor runs here
+        try:
+            receipt = await external.approve_external(body.approver)
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from exc
+        return {"run_id": run_id, "decision_id": pending["decision_id"], "status": receipt.get("outcome")}
     _background(run, lambda mc: approve(run, body.approver, CLIENTS[run_id], mc))
     return {"run_id": run_id, "decision_id": pending["decision_id"], "status": "executing"}
 
@@ -188,5 +204,8 @@ async def reject_run(run_id: str, body: Rejection) -> dict:
     run = _get(run_id)
     if run.status != "awaiting_approval":
         raise HTTPException(409, f"run is {run.status}")
+    if run_id == external.EXTERNAL_ID:
+        external.reject_external(body.feedback)
+        return {"run_id": run_id, "status": "rejected; tell the agent in your MCP client"}
     _background(run, lambda mc: reject(run, body.feedback, CLIENTS[run_id], mc))
     return {"run_id": run_id, "status": "re-planning"}

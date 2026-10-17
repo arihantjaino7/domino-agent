@@ -41,7 +41,6 @@ async def main_async(scenario: str, dry_run: bool) -> int:
     if dry_run:
         from domino.agent.scripted import ScriptedClient
         client = ScriptedClient(scenario)
-        settings.memory_graph = "memory:dryrun"  # scripted lessons must never reach the real memory graph
     else:
         if not settings.anthropic_api_key:
             print("ANTHROPIC_API_KEY is not set in .env. Use DRY_RUN=1 for the free scripted check.")
@@ -51,7 +50,7 @@ async def main_async(scenario: str, dry_run: bool) -> int:
 
     live = reset_live()
     sc = SCENARIOS[scenario]
-    run = new_run(scenario, sc["alert"], live)
+    run = new_run(scenario, sc["alert"], live, scripted=dry_run)
     run.listeners.append(_print)
     print(f"DOMINO agent  scenario={scenario}  run={run.id}  model={'scripted (dry run)' if dry_run else settings.domino_model}")
     print(f"alert: {sc['alert']}\n")

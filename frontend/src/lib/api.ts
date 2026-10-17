@@ -26,6 +26,7 @@ export const api = {
   reset: () => req<{ graph: string }>('/api/world/reset', { method: 'POST' }),
   inject: (body: { entity_ids: string[]; kind: string; title: string; capacity_factor: number; duration_days: number }) =>
     req<{ incident_id: string; site_ids: string[] }>('/api/incidents', { method: 'POST', body: JSON.stringify(body) }),
+  watchExternal: () => req<{ run_id: string }>('/api/external/watch', { method: 'POST' }),
   startRun: (body: { scenario: string; dry_run: boolean }) =>
     req<{ run_id: string }>('/api/runs', { method: 'POST', body: JSON.stringify(body) }),
   approve: (runId: string, decisionId: string) =>

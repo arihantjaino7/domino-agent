@@ -11,12 +11,14 @@ on the live world. There is no tool that writes Cypher, and `execute_plan` is no
 from __future__ import annotations
 
 import asyncio
+import time
 from typing import Annotated, Any
 
 from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 from pydantic import Field
 
+from domino.agent import external
 from domino.agent import tools as T
 from domino.agent.context import get_context
 from domino.graph.client import ping
@@ -29,16 +31,26 @@ RunId = Annotated[str, Field(description="Injected by DOMINO's agent loop; leave
 
 
 async def _call(fn, run_id: str, **kwargs: Any) -> dict[str, Any]:
-    ctx = get_context(run_id)
+    # No run_id: the caller is an external MCP client (Claude Code / Desktop) acting as the agent.
+    # Its calls are recorded as the "external" run so the war room can watch and approve.
+    is_external = not run_id
+    run = external.before_call(fn.__name__, kwargs) if is_external else None
+    ctx = get_context(external.EXTERNAL_ID if is_external else run_id)
+    t0 = time.monotonic()
 
     def work() -> dict[str, Any]:
         with ctx.lock:
             return fn(ctx, **kwargs)
 
     try:
-        return await asyncio.to_thread(work)
+        out = await asyncio.to_thread(work)
     except T.ToolInputError as exc:  # surfaces as is_error: true with this message, so the agent can recover
+        if run:
+            external.after_call(run, fn.__name__, None, str(exc), round((time.monotonic() - t0) * 1000))
         raise ToolError(str(exc)) from exc
+    if run:
+        external.after_call(run, fn.__name__, out, None, round((time.monotonic() - t0) * 1000))
+    return out
 
 
 @mcp.tool()
@@ -178,6 +190,16 @@ async def submit_plan_for_approval(
     pauses until a human approves or rejects; you will then be told the outcome."""
     return await _call(T.submit_plan_for_approval, run_id, strategy_id=strategy_id, rationale=rationale,
                        evidence_ids=evidence_ids)
+
+
+@mcp.tool()
+async def get_decision_status(
+    decision_id: Annotated[str, Field(description="Decision id returned by submit_plan_for_approval")],
+    run_id: RunId = "",
+) -> dict:
+    """Read-only: whether the human has approved (and the executor ran), rejected (with feedback), or not
+    yet answered. Use it after the human says they decided. It never executes anything."""
+    return await _call(T.get_decision_status, run_id, decision_id=decision_id)
 
 
 @mcp.tool()

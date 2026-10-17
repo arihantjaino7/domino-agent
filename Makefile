@@ -1,7 +1,7 @@
 # Recipes are plain commands that work under cmd.exe (native Windows make), bash and zsh.
 # Anything fancier lives in a Python script under scripts/.
 
-.PHONY: help up down seed test dev api cli demo-headless eval spike
+.PHONY: help up down seed test dev api cli demo-headless eval spike agent-workspace
 
 help:
 	@echo Targets: up down seed test dev api cli demo-headless eval spike
@@ -33,6 +33,9 @@ demo-headless: ## M6: make demo-headless SCENARIO=monsoon [DRY_RUN=1 for the fre
 
 eval: ## M10
 	$(error make eval is not built yet - milestone M10)
+
+agent-workspace: ## create ../domino-agent so Claude Code can be the agent over MCP (free)
+	uv run --project backend python scripts/agent_workspace.py
 
 spike: ## M1 capability spike -> docs/SPIKE.md
 	uv run --project backend python scripts/spike.py

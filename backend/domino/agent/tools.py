@@ -129,7 +129,7 @@ def get_entity_context(ctx: RunContext, entity_id: str) -> dict[str, Any]:
 
 
 def recall_history(ctx: RunContext, entity_ids: list[str]) -> dict[str, Any]:
-    rows = memory.recall_history(entity_ids)
+    rows = memory.recall_history(entity_ids, graph=ctx.memory_graph)
     summary = {"memories": rows, "outcome": "answered_from_memory" if rows else "nothing_remembered",
                "note": "Each memory carries the date it was learned (learned_on)."}
     ctx.add_result("recall_history", summary, {"memories": rows})
@@ -291,7 +291,8 @@ def submit_plan_for_approval(ctx: RunContext, strategy_id: str, rationale: str,
     summary = {"decision_id": plan["decision_id"], "strategy_id": strategy_id, "status": "awaiting_approval",
                "plan_hash": plan["plan_hash"], "spend_usd": _usd(plan["spend_cents"]),
                "purchase_orders": len(plan["pos"]), "orders_to_protect": len(plan["protected_orders"]),
-               "next": "A human now approves or rejects. Do not call more tools until you hear back."}
+               "next": "A human now approves or rejects in the DOMINO war room. Wait for them; "
+                       "get_decision_status tells you the outcome."}
     ctx.add_result("submit_plan_for_approval", summary, {"plan": plan, "rationale": rationale})
     return summary
 
@@ -299,6 +300,23 @@ def submit_plan_for_approval(ctx: RunContext, strategy_id: str, rationale: str,
 # ---------------------------------------------------------------------------
 # Verify and report
 # ---------------------------------------------------------------------------
+
+def get_decision_status(ctx: RunContext, decision_id: str) -> dict[str, Any]:
+    """Read-only: has the human approved, rejected or not yet answered? Never executes anything."""
+    row = run_query("decision/get", {"decision_id": decision_id}, graph=ctx.graph)[0]
+    if row["decision"] is None:
+        raise ToolInputError(f"unknown_entity: decision {decision_id} is not in the graph")
+    if decision_id in ctx.rejected:
+        state, nxt = "rejected", "Re-plan using the human's feedback, then submit again."
+    elif row["status"] == "executed":
+        state, nxt = "executed", "Call verify_execution, record lessons, then submit_incident_report."
+    else:
+        state, nxt = "awaiting_approval", "Still waiting. Ask the human to approve or reject in the DOMINO war room."
+    summary = {"decision_id": decision_id, "status": state, "feedback": ctx.rejected.get(decision_id),
+               "receipt": (ctx.receipt or {}).get("summary") if state == "executed" else None, "next": nxt}
+    ctx.add_result("get_decision_status", summary, summary)
+    return summary
+
 
 def verify_execution(ctx: RunContext, decision_id: str) -> dict[str, Any]:
     plan = ctx.pending if ctx.pending and ctx.pending["decision_id"] == decision_id else None
@@ -322,11 +340,12 @@ def record_lessons(ctx: RunContext, incident_id: str, lessons: list[dict[str, An
         require_ids(ctx, ids)
     involved = ids
     memory.record_incident({"id": incident_id, "title": ctx.alert_text[:120] or incident_id, "outcome": "recorded"},
-                           [{"id": e, "kind": "entity", "name": e, "role": "involved"} for e in involved])
+                           [{"id": e, "kind": "entity", "name": e, "role": "involved"} for e in involved],
+                           graph=ctx.memory_graph)
     lesson_ids = memory.record_lessons(incident_id, [{"text": l["text"][:500], "entity_ids": l.get("entity_ids", []),
                                                       "evidence": ",".join(l.get("evidence_ids", []))}
-                                                     for l in lessons])
-    summary = {"incident_id": incident_id, "lesson_ids": lesson_ids, "graph": "memory"}
+                                                     for l in lessons], graph=ctx.memory_graph)
+    summary = {"incident_id": incident_id, "lesson_ids": lesson_ids, "graph": ctx.memory_graph}
     ctx.add_result("record_lessons", summary, summary)
     return summary
 
@@ -387,7 +406,8 @@ def submit_incident_report(ctx: RunContext, headline: str, outcome: str, claims:
 CATALOGUE = [
     resolve_entities, declare_incident, get_entity_context, recall_history, trace_exposure,
     explain_shared_dependencies, project_shortages, compute_true_capacity, find_alternatives,
-    simulate_strategies, flag_orders_at_risk, submit_plan_for_approval, verify_execution, record_lessons,
+    simulate_strategies, flag_orders_at_risk, submit_plan_for_approval, get_decision_status, verify_execution,
+    record_lessons,
     submit_incident_report,
 ]
 GATES = {"submit_plan_for_approval"}

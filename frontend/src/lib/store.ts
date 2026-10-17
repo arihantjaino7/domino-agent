@@ -7,6 +7,7 @@ import type { NodeStatus, Places, RunEvent, RunStatus, Scenario, Summary, WorldG
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 /* ---------- the agent's journey, as the sidebar shows it ---------- */
+export type Mode = 'scripted' | 'mcp' | 'api'
 export type StepId = 'detect' | 'trace' | 'impact' | 'options' | 'simulate' | 'approve' | 'verify'
 export const STEPS: { id: StepId; num: string; title: string; tools: string[] }[] = [
   { id: 'detect', num: '01', title: 'Detect', tools: ['resolve_entities', 'declare_incident'] },
@@ -14,7 +15,7 @@ export const STEPS: { id: StepId; num: string; title: string; tools: string[] }[
   { id: 'impact', num: '03', title: 'Impact', tools: ['project_shortages', 'flag_orders_at_risk'] },
   { id: 'options', num: '04', title: 'Options', tools: ['compute_true_capacity', 'find_alternatives'] },
   { id: 'simulate', num: '05', title: 'Simulate', tools: ['simulate_strategies'] },
-  { id: 'approve', num: '06', title: 'Approve', tools: ['submit_plan_for_approval'] },
+  { id: 'approve', num: '06', title: 'Approve', tools: ['submit_plan_for_approval', 'get_decision_status'] },
   { id: 'verify', num: '07', title: 'Verify', tools: ['verify_execution', 'record_lessons', 'submit_incident_report'] },
 ]
 export const STEP_OF: Record<string, StepId> = Object.fromEntries(STEPS.flatMap((s) => s.tools.map((t) => [t, s.id])))
@@ -68,7 +69,7 @@ interface State {
   scenarios: Scenario[]
   places: Places | null
   scenario: string
-  dryRun: boolean
+  mode: Mode
   theme: 'light' | 'dark'
   runId: string | null
   runStatus: RunStatus
@@ -84,7 +85,7 @@ interface State {
   load: () => Promise<void>
   refresh: () => Promise<void>
   setScenario: (s: string) => void
-  setDryRun: (b: boolean) => void
+  setMode: (m: Mode) => void
   setTheme: (t: 'light' | 'dark') => void
   select: (s: StepId | null) => void
   setHoverEvidence: (id: string | null) => void
@@ -269,7 +270,7 @@ function initialTheme(): 'light' | 'dark' {
 }
 
 export const useStore = create<State>((set, get) => ({
-  graph: null, summary: null, scenarios: [], places: null, scenario: 'monsoon', dryRun: true, theme: initialTheme(),
+  graph: null, summary: null, scenarios: [], places: null, scenario: 'monsoon', mode: 'scripted', theme: initialTheme(),
   runId: null, runStatus: 'idle', events: [], steps: [], pendingDecision: null, selected: null, hoverEvidence: null,
   error: null, busy: false, ready: false, derived: EMPTY,
 
@@ -286,7 +287,7 @@ export const useStore = create<State>((set, get) => ({
     set({ graph, summary, derived: derive(graph, summary, get().steps, get().events) })
   },
   setScenario: (scenario) => set({ scenario }),
-  setDryRun: (dryRun) => set({ dryRun }),
+  setMode: (mode) => set({ mode }),
   setTheme: (theme) => {
     try { localStorage.setItem('domino-theme', theme) } catch { /* storage unavailable */ }
     document.documentElement.dataset.theme = theme
@@ -299,9 +300,16 @@ export const useStore = create<State>((set, get) => ({
     unsubscribe?.()
     set({ busy: true, error: null, events: [], steps: [], pendingDecision: null, runStatus: 'running', selected: null })
     try {
-      await api.reset()
-      await get().refresh()
-      const { run_id } = await api.startRun({ scenario: get().scenario, dry_run: get().dryRun })
+      let run_id: string
+      if (get().mode === 'mcp') {
+        // Claude Code (or Desktop) is the agent; the war room only watches and approves.
+        run_id = (await api.watchExternal()).run_id
+        await get().refresh()
+      } else {
+        await api.reset()
+        await get().refresh()
+        run_id = (await api.startRun({ scenario: get().scenario, dry_run: get().mode === 'scripted' })).run_id
+      }
       set({ runId: run_id, busy: false })
       unsubscribe = subscribe(run_id, (ev) => {
         set((s) => applyEvent(s, ev))

@@ -44,6 +44,8 @@ function StepBody({ step }: { step: StepId | null }) {
 }
 
 function Idle() {
+  const mode = useStore((s) => s.mode)
+  if (mode === 'mcp') return <McpHint />
   return (
     <div className="grid gap-4">
       <p className="text-[13.5px] leading-[1.6] text-ink-2">
@@ -61,6 +63,53 @@ function Idle() {
     </div>
   )
 }
+/** Claude Code (or Desktop) is the agent here: tell the person exactly what to open and paste. */
+function McpHint() {
+  const runId = useStore((s) => s.runId)
+  const alert = useStore((s) => s.scenarios.find((x) => x.id === s.scenario)?.alert ?? '')
+  const [copied, setCopied] = useState(false)
+  const prompt = `New alert (synthetic): <alert>${alert}</alert> Handle it with the DOMINO tools.`
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(prompt)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1800)
+    } catch {
+      setCopied(false)
+    }
+  }
+  return (
+    <div className="grid gap-4">
+      <p className="text-[13.5px] leading-[1.6] text-ink-2">
+        Here the agent is <b className="font-medium text-ink">Claude Code</b>, connected to DOMINO over MCP. It reads the alert and calls DOMINO&apos;s tools;
+        every call appears here live. Purchase orders still wait for <b className="font-medium text-ink">your</b> approval in this panel.
+      </p>
+      <ol className="stagger grid">
+        {[
+          runId === 'external' ? 'Watching. This war room is listening for tool calls.' : 'Press "Watch Claude Code" (resets the world and starts listening).',
+          'Open Claude Code in the folder C:\\dev\\domino-agent (make agent-workspace creates it).',
+          'Paste the prompt below and send it.',
+          'When it asks for approval, approve or reject here, then tell Claude Code "done".',
+        ].map((t, i) => (
+          <li key={i} className="row" style={{ ['--s' as string]: i }}>
+            <span className="num w-5 text-[12px] text-accent">{i + 1}</span>
+            <span className="text-[13px]">{t}</span>
+          </li>
+        ))}
+      </ol>
+      <div className="card p-3.5 shadow-none">
+        <div className="mb-2 flex items-center justify-between">
+          <span className="label">Prompt for Claude Code</span>
+          <button type="button" className="btn btn-ghost h-7 px-3 text-[12px]" onClick={() => void copy()}>
+            {copied ? 'Copied' : 'Copy'}
+          </button>
+        </div>
+        <p className="mono text-[11.5px] leading-[1.55] text-ink-2">{prompt}</p>
+      </div>
+    </div>
+  )
+}
+
 const IDLE_HINT: Record<StepId, string> = {
   detect: 'alert → graph entities',
   trace: 'tier-1 view vs multi-tier',

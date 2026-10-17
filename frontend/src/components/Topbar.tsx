@@ -7,8 +7,8 @@ export function Topbar() {
   const scenarios = useStore((s) => s.scenarios)
   const scenario = useStore((s) => s.scenario)
   const setScenario = useStore((s) => s.setScenario)
-  const dryRun = useStore((s) => s.dryRun)
-  const setDryRun = useStore((s) => s.setDryRun)
+  const mode = useStore((s) => s.mode)
+  const setMode = useStore((s) => s.setMode)
   const run = useStore((s) => s.run)
   const status = useStore((s) => s.runStatus)
   const busy = useStore((s) => s.busy)
@@ -35,16 +35,17 @@ export function Topbar() {
       />
       <Seg
         label="Model"
-        value={dryRun}
+        value={mode}
         disabled={working}
-        onChange={setDryRun}
+        onChange={setMode}
         options={[
-          { value: true, label: 'Scripted · free' },
-          { value: false, label: 'Claude · live' },
+          { value: 'scripted', label: 'Scripted' },
+          { value: 'mcp', label: 'Claude Code · MCP' },
+          { value: 'api', label: 'Claude API' },
         ]}
       />
       <Btn variant="primary" shine arrow icon={<Play size={13} strokeWidth={2} />} disabled={working} onClick={() => void run()}>
-        {working ? 'Running' : 'Run DOMINO'}
+        {working ? 'Running' : mode === 'mcp' ? 'Watch Claude Code' : 'Run DOMINO'}
       </Btn>
     </header>
   )
