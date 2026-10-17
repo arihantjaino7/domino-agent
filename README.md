@@ -119,7 +119,7 @@ The server is mounted at `/mcp`. It exposes these names from `backend/domino/mcp
 | Demo | Choose a scenario and press **Run the demo**. `agent/scripted.py` supplies model responses. | Free, scripted and offline after setup; still needs the local backend and FalkorDB. |
 | Replay | Choose **Replay**, pick a recording and press **Play the recording**. The war room plays back a recorded run: its events and the world as it was at each step. Your Approve only continues the recording. | Free, needs no API key or Claude subscription, and changes nothing in the graph. Recordings live in `demo/replays/`. |
 | Claude Code over MCP | Run `make agent-workspace`, then use the generated workspace with Claude Code and watch the war room. | Free with a Claude subscription; no Anthropic API key needed for this mode. |
-| Claude API | Use the API mode with `ANTHROPIC_API_KEY` configured. | Paid and rate-limited by the application. |
+| Claude API | Use the API mode with `ANTHROPIC_API_KEY` configured. | Paid and rate-limited by the application. **Implemented but not run against the real API:** the author has no API budget, so this path is tested only with the scripted stand-in model. The real-model evidence in this repo is the Claude Code run. |
 
 ## 8. Safety and verification
 
