@@ -219,3 +219,44 @@ def test_a_number_no_tool_returned_is_called_out():
         T.submit_incident_report(c, "h", "answered_with_path", [{"type": "late", "text": "987 orders are late.",
                                                                  "entities": [], "evidence_ids": [],
                                                                  "metric_refs": ["R-01.totals.late"]}])
+
+# ---------------------------------------------------------------------------
+# SSE: two open tabs both get every event promptly
+# ---------------------------------------------------------------------------
+
+def test_two_sse_readers_both_get_new_events_without_waiting_for_the_timeout():
+    import asyncio
+    import time
+
+    from domino.agent import external
+    from domino.agent.loop import AgentRun, emit
+    from domino.api.runs import run_events
+
+    class Req:
+        headers: dict = {}
+
+        async def is_disconnected(self):
+            return False
+
+    async def go():
+        run = external.register(AgentRun(id="t-m11-sse", scenario="x", alert_text="", graph=WORLD, status="running"))
+        emit(run, "run.started", {})
+        streams = [(await run_events(run.id, Req())).body_iterator for _ in range(2)]
+        firsts = await asyncio.gather(*(s.__anext__() for s in streams))   # both drain the backlog
+        assert all(f["event"] == "run.started" for f in firsts)
+        waiting = [asyncio.ensure_future(s.__anext__()) for s in streams]  # both now wait for the next event
+        await asyncio.sleep(0.05)
+        t0 = time.monotonic()
+        emit(run, "tool.called", {"tool": "trace_exposure"})
+        got = await asyncio.wait_for(asyncio.gather(*waiting), timeout=2)  # far below the 15 s fallback
+        assert [g["event"] for g in got] == ["tool.called", "tool.called"]
+        assert time.monotonic() - t0 < 1
+        run.status = "completed"
+        emit(run, "run.completed", {})
+        for s in streams:
+            assert (await s.__anext__())["event"] == "run.completed"
+            await s.aclose()
+        assert run.listeners == [run.listeners[0]]                         # readers removed their listeners
+        external.RUNS.pop(run.id, None)
+
+    asyncio.run(go())
