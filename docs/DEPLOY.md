@@ -92,5 +92,5 @@ curl -N --max-time 15 https://203-0-113-7.sslip.io/api/runs/$RID/events
 
 - **Restarts keep the live world and memory.** `domino.seed.ensure` only builds what is missing. To regenerate the world on purpose: `docker compose -f docker-compose.prod.yml exec app python -m domino.seed`.
 - **Real agent runs are capped** per visitor per hour and globally per day (HTTP 429 after that). `dry_run` runs use the scripted model and cost nothing.
-- Replay mode for recorded runs, and per-visitor worlds, come in M11.
+- Per-visitor worlds are not built: every visitor shares one live world, and a reset or run by one visitor changes what the others see.
 - **Replay mode** needs nothing on the server: the published recordings in `demo/replays/` are copied into the image, and `RECORD_REPLAYS=false` in `docker-compose.prod.yml` stops visitors' runs from being saved. To publish a new recording, run it locally, copy `backend/runs/replays/<run-id>.json` to `demo/replays/<short-name>.json`, set its `id`, `title` and `note`, commit and rebuild.
