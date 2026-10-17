@@ -86,3 +86,47 @@ Blocker and recovery status:
 - After safe storage recovery and graph-state verification, run `uv run --project backend pytest backend/tests eval -q`, then `uv run --project backend python -m eval.run`. Main evaluation needs all 176 method rows and six scripted runs; real-model A and CP-SAT D remain unmeasured.
 
 Nothing was pushed. No paid model API was called. The complete backend suite could not run while the database was unavailable. Deployment remains with Claude. The final evaluation implementation/blocked-run commit is discoverable with `git log -1 --oneline` after this handoff is committed.
+
+## Eval review notes for Claude
+
+Added 2026-10-17; review basis: harness `aca3e3a` and current source. **Supersedes the outage/resume advice above:** Arihant reports the cause was a full C: drive, freeing space restored Docker, and all six graphs match the backup counts. He reports `make test`: 81 passed; `pytest eval`: 24 passed. I did not rerun these. Claude now owns evaluation/results/README numbers. No Docker/WSL restart, repair/prune or second evaluator should be started.
+
+### Oracle assumptions and method definitions
+
+Agreement checks implementation consistency, not the truth of shared supply-chain assumptions.
+
+- **Schema:** global unique IDs, valid endpoints, a FEEDS DAG, one customer/product/plant per order, one stock balance per plant/component, positive integer BOM quantities. Duplicate functional links can collapse in dictionaries. Cycles anywhere in the export are rejected. Missing factors default to 1; explicit nulls/malformed properties are not generally normalized as production queries sometimes do.
+- **Units/time:** integer days, units/week and cents; day 0 is the incident day. Horizon 42 includes 43 arrival ticks (0-42). Arrivals precede demand, including day 0. Normal supply uses exact fractional weekly rates / 7, with cumulative floors pooled by plant/component.
+- **Incident/exposure:** Site/Region/HazardZone expansion uses IN_ZONE/LOCATED_IN. Each case overwrites affected factors/durations for one day-0 incident. Exposure follows any FEEDS edges for 0-4 hops, then matching SUPPLIES/BUILDS/REQUIRES links to open orders due within the horizon. Structural exposure is not actual shortage.
+- **Availability/pipeline:** same-input suppliers use used_wk weights, or cap_wk if total use is zero; complementary input groups use their minimum share, times own factor. Earliest upstream onset plus destination buffer determines onset; own disruption starts at 0. Latest contributing restoration wins (unknown means indefinite), without a restoration buffer. One reduced-rate interval represents the site; SUPPLIES transit shifts it. Full-rate pipeline is assumed before that interval.
+- **Demand/late counts:** open/protected_projected orders due by horizon use qty x immediate product REQUIRES quantities; no MADE_FROM expansion or alternate-part substitution in consumption. Queue: need_day, strategic first, ID. No early/partial completion or assembly lead time; all inputs must coexist, and an unavailable order can be skipped. Each late order counts once. Ready after due day is late; unresolved orders use horizon + 1 for censored late days. Customer penalty is cents/day per order, not per quantity.
+- **PO delivery:** committed/in_transit only; cumulative floored arrivals start inclusively at first_arrival_day and stop at qty. PROTECTS units are earmarked by need_day/ID before leftovers enter shared stock; earmarks remain reserved. These are projected arrivals, not received/shipped status.
+- **PO rationing:** immediate feeders/direct MADE_FROM only. Existing nominal used_wk has priority over new room = max(0, floor(capacity x factor) - used out). Per-PO attribution sorts nonzero-factor feeders first, then headroom and ID; leftover demand lands on the first feeder. All POs/components/plants share each feeder proportionally, flooring grants separately and taking the minimum across required inputs after BOM division. Source factor is only on/off here, not another proportional cap. Rates stay fixed despite recovery dates; no deeper-tier propagation.
+- **Flow:** independent NetworkX node splitting, four-hop FEEDS/BOM bounds, floor-converted capacities, parallel-edge sums, current factors and SUPPLIES/CAN_SUPPLY potential (used + spare). No inventory/transit/restoration timing. Each component/plant and standalone site is solved separately; values are not jointly additive. Complementary inputs pool together: this is an upper bound. BOM paths must give equal ratios or the oracle raises; production keeps the first. Each upstream site assumes a consistent output unit.
+- **Evidence/metrics:** checks path structure/hops, entities, listed order identities and summed value; order-set precision/recall does not certify all possible paths or narrative numbers. Projection comparisons cover ready days, total penalties and PO rates, not every UI field. Spend/revenue/net-benefit summaries use production score(), not a second financial oracle.
+
+All recovery methods share build_problem's graph-derived late-order list, full quantities for reduced components, candidate catalogue, order priority and 25,000,000-cent budget. This is an allocation comparison, not tier-1-only detection. Full-component replacement rather than net shortage can overbuy; MOQ padding adds buffer.
+
+| Runner label | Exact meaning |
+|---|---|
+| B0 / S0 | Do nothing: post-incident baseline projection, no recovery POs. |
+| B1 / S1 | Same greedy allocator; cheapest unit price then site ID, sea only, nominal approved spare minus reservations. Includes candidates rejected solely for zero clean capacity; no clean-capacity filter/shared-feeder overload check. |
+| B2 / S2 | Same price/sea/inputs/budget as B1; excludes naive-only candidates, caps by usable clean capacity and checks joint immediate-feeder overloads. |
+| S4 | Graph-aware plus rounded cost x (2 - reliability) x taint multiplier (1.1 if tainted), then arrival/ID. Reliability is static supplier data, defaults to 0.9 when falsy. Sea if timely, otherwise air if timely. Its gains include changed ranking/shipping. |
+
+Greedy is not proven optimal; S4 is a preset. B1 verifier/trap violations remain baseline outcomes; oracle mismatches and B2/S4 safety failures fail evaluation. B0 timing is projection only; other method timers include allocation, proposal/approval, execution, projection and verification, excluding common problem construction, copies/exports/oracle work. Setup is separate. Query percentiles cover successful logged calls, not request/deployment latency.
+
+### Execution coverage
+
+- Earlier completed checks: 60 database-free seed projections and four read-only existing-world checks (including existing PO rates/evidence where present). The former bypasses Cypher/allocation/execution; the latter does not run database max-flow or new recovery plans.
+- An initial database smoke was interrupted by fork/persistence/storage failures. Final committed blocked results have zero method rows/scripted runs; earlier eval/out/smoke partial artifacts are not passing benchmark totals.
+- I never completed the 176-row database matrix (20 seeds x 2 incidents x 4 methods + 4 adversarial worlds x 4 methods), full healthy-world checks, or all post-execution oracle/flow/safety/cleanup comparisons. The four adversarial worlds were hand-checked/unit-tested, not completed as database recovery trials by this runner.
+- The six P-scripted MCP repeats were not completed. Real-model A was not evaluated; no paid API was called. D/CP-SAT is absent. Memory learning, second-disruption replanning and deployment/UI behavior are outside these measurements.
+- Backup checksums/counts were verified; restore was never tested. Arihant's recovery/test results above are newer evidence, not a benchmark rerun by me.
+
+### Uncertainties for the review
+
+- Exact fractions versus production float/floor boundaries can disagree in capacity/rationing; inspect boundary failures without assuming either side is correct.
+- Nullable/duplicate links, ambiguous BOM paths, mixed-output sites, alternate consumption and deeper shared inputs need review before broader claims. The implementation is separate, but seed families, fixture builders and model assumptions are shared.
+- Full database integration, exception cleanup and peak disk/fork requirements remain unvalidated across the matrix. Unique graph names prevent ordinary name collisions, not resource contention; keep one evaluation owner/runner.
+- The old outage status and incomplete totals are historical. Claude should update owned environment/results files and README from his reviewed run; I left those untouched.
