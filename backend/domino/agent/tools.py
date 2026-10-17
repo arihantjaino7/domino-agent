@@ -353,9 +353,14 @@ def record_lessons(ctx: RunContext, incident_id: str, lessons: list[dict[str, An
     ids = sorted({e for l in lessons for e in l.get("entity_ids", [])})
     if ids:
         require_ids(ctx, ids)
-    involved = ids
-    memory.record_incident({"id": incident_id, "title": ctx.alert_text[:120] or incident_id, "outcome": "recorded"},
-                           [{"id": e, "kind": "entity", "name": e, "role": "involved"} for e in involved],
+    # Store names and labels from the world, so memory still reads well after the world is reset.
+    known = memory.entity_names(ids, ctx.graph)
+    alert = ctx.alert_text if len(ctx.alert_text) <= 120 else ctx.alert_text[:119].rstrip() + "…"
+    title = alert or next((i["title"] for i in run_query("graph/incidents", graph=ctx.graph)
+                           if i["id"] == incident_id and i["title"]), incident_id)
+    memory.record_incident({"id": incident_id, "title": title, "outcome": "recorded"},
+                           [{"id": e, "kind": (known.get(e) or {}).get("kind") or "entity",
+                             "name": (known.get(e) or {}).get("name") or e, "role": "involved"} for e in ids],
                            graph=ctx.memory_graph)
     lesson_ids = memory.record_lessons(incident_id, [{"text": l["text"][:500], "entity_ids": l.get("entity_ids", []),
                                                       "evidence": ",".join(l.get("evidence_ids", []))}

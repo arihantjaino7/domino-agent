@@ -46,3 +46,17 @@ def recall_history(entity_ids: list[str], graph: str | None = None) -> list[dict
 
 def list_incidents(graph: str | None = None) -> list[dict[str, Any]]:
     return run_query("memory/incidents", graph=graph or settings.memory_graph)
+
+
+def list_lessons(graph: str | None = None) -> list[dict[str, Any]]:
+    """Every lesson, newest first; `evidence` is split back into the evidence ids it cited."""
+    rows = run_query("memory/lessons", graph=graph or settings.memory_graph)
+    return [{**r, "evidence": [e for e in (r["evidence"] or "").split(",") if e]} for r in rows]
+
+
+def entity_names(ids: list[str], world_graph: str) -> dict[str, dict[str, Any]]:
+    """{id: {name, kind}} for the ids that exist in `world_graph`; ids not in that world are left out."""
+    if not ids:
+        return {}
+    rows = run_query("memory/entity_names", {"ids": sorted(set(ids))}, graph=world_graph)
+    return {r["id"]: {"name": r["name"], "kind": r["kind"]} for r in rows if r["kind"] is not None}

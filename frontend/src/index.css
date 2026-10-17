@@ -420,3 +420,11 @@ select.pick { height: 34px; padding: 0 30px 0 12px; border-radius: 99px; backgro
 .toast.out { opacity: 0; transform: translateY(6px); }
 @media (max-width: 1180px) { .start { grid-template-columns: 1fr; } }
 @media (max-width: 760px) { .toasts { left: 12px; right: 12px; bottom: 84px; max-width: none; } }
+
+/* Memory panel (AgentView): past incidents and lessons */
+.mem-inc { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+.mem-h { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.mem-lesson { margin-top: 10px; padding-left: 10px; border-left: 2px solid var(--line); }
+.mem-ents { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 6px; }
+.mem-ent { font-size: 11.5px; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--line); color: var(--ink-2); }
+.mem-ent.gone { border-style: dashed; color: var(--muted); }

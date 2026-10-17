@@ -1,6 +1,8 @@
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { fmt, plural, usd, useModel, type Model } from '../lib/model'
+import { api } from '../lib/api'
 import { STEPS, useStore, type StepId } from '../lib/store'
+import type { Memory } from '../lib/types'
 import { Head, RunPanel } from './Controls'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -28,6 +30,63 @@ function stepState(m: Model, id: StepId): 'done' | 'wait' | 'todo' | 'active' {
   if (mine.some((s) => s.state === 'running')) return 'active'
   if (mine.length) return 'done'
   return 'todo'
+}
+
+const WHEN = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
+const learned = (d: string) => (d ? WHEN.format(new Date(`${d}T00:00:00`)) : 'date not recorded')
+
+/** Past incidents and lessons from the memory graph (GET /api/memory). Demo runs keep their own memory. */
+function MemoryPanel({ refresh }: { refresh: string }) {
+  const st = useStore()
+  // follows the run mode (demo runs read memory:dryrun) until the viewer picks one
+  const [picked, setSource] = useState<'real' | 'demo' | null>(null)
+  const source = picked ?? (st.mode === 'scripted' ? 'demo' : 'real')
+  const [mem, setMem] = useState<Memory | null>(null)
+  const [err, setErr] = useState<string | null>(null)
+  useEffect(() => {
+    let live = true
+    api.memory(source).then((r) => { if (live) { setMem(r); setErr(null) } }, (e: Error) => { if (live) setErr(e.message) })
+    return () => { live = false }
+  }, [source, refresh])
+  const names = (es: Memory['lessons'][number]['entities']) => es.map((e) => (
+    <span className={`mem-ent ${e.in_world ? '' : 'gone'}`} key={e.id} title={e.in_world ? e.id : `${e.id}: not in the current world (that does not mean it is safe)`}>{e.name}</span>
+  ))
+  return (
+    <div className="card"><div className="card-b">
+      <div className="side-h"><h3>What DOMINO remembers</h3>
+        <div className="chip-toggle" role="group" aria-label="Which memory">
+          <button type="button" className={source === 'real' ? 'on' : ''} onClick={() => setSource('real')}>Real runs</button>
+          <button type="button" className={source === 'demo' ? 'on' : ''} onClick={() => setSource('demo')}>Demo runs</button>
+        </div>
+      </div>
+      {err && <p className="plain">Could not read memory: {err}</p>}
+      {mem && !err && (mem.counts.lessons === 0 && mem.counts.incidents === 0 ? (
+        <p className="plain muted">Nothing remembered yet. {source === 'demo' ? 'Finish a demo run and its lessons appear here.' : 'Lessons from real agent runs appear here once a run finishes.'}</p>
+      ) : (
+        <>
+          <p className="sub">{plural(mem.counts.incidents, 'past incident')}, {plural(mem.counts.lessons, 'lesson')}. Kept in <span className="mono">{mem.graph}</span>, which survives a world reset. The agent reads these before it plans.</p>
+          {mem.incidents.map((inc) => {
+            const ls = mem.lessons.filter((l) => l.incident_id === inc.id)
+            return (
+              <div className="mem-inc" key={inc.id}>
+                <div className="mem-h"><span className="mono">{inc.id}</span><span className="sub">learned {learned(inc.learned_on)}</span></div>
+                {inc.title && inc.title !== inc.id && <p className="plain">{inc.title}</p>}
+                {ls.map((l) => (
+                  <div className="mem-lesson" key={l.id}>
+                    <p className="plain">{l.text}</p>
+                    <div className="mem-ents">{names(l.entities)}{l.evidence.length > 0 && <span className="mono muted">evidence {l.evidence.join(', ')}</span>}</div>
+                  </div>
+                ))}
+              </div>
+            )
+          })}
+          {mem.lessons.filter((l) => !mem.incidents.some((i) => i.id === l.incident_id)).map((l) => (
+            <div className="mem-lesson" key={l.id}><p className="plain">{l.text}</p><div className="mem-ents">{names(l.entities)}<span className="sub">learned {learned(l.learned_on)}</span></div></div>
+          ))}
+        </>
+      ))}
+    </div></div>
+  )
 }
 
 export function AgentView() {
@@ -194,6 +253,7 @@ export function AgentView() {
             <div className="card"><div className="card-b"><div className="side-h"><h3>What it learned</h3><span className="mono muted">{m.d.memoryGraph}</span></div>
               {m.d.lessons.map((l, i) => <p className="plain" key={i}>{l.text}</p>)}</div></div>
           )}
+          <MemoryPanel refresh={m.phase} />
           {(pl || m.phase === 'done' || m.phase === 'failed') && <div className="card"><div className="card-b"><div className="side-h"><h3>Run again</h3></div><RunPanel compact /></div></div>}
         </div>
       </div>

@@ -46,3 +46,7 @@ uv run --project backend python -m eval.run
 The runner uses seeds 42–61, both disruption motifs, four hand-worked fixtures and two free scripted repeats of each scenario. It fails nonzero on incomplete coverage, oracle mismatches, graph-aware safety failures or scripted smoke failures, while retaining baseline violations. It never calls a paid API. `make eval` runs the same default recipe.
 
 The independent oracle and runner are not yet integration-validated across the complete database trial matrix. Do not fill README recovery numbers from the partial or offline checks.
+
+## Resolved (Oct 17, evening)
+
+Root cause: the C: drive was full (`df` showed 251 MB free). After the author freed space, Docker Desktop started normally with its existing data disk (no format), `docker compose up -d --wait` came up healthy, and all six graphs matched the backup manifest above exactly (same node and relationship counts). `rdb_last_bgsave_status` is `ok`. `make test` passed (81, before the Memory tab work). Keep at least 10 GB free before `make eval`.

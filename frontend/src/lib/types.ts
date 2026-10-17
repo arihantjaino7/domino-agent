@@ -64,3 +64,19 @@ export interface Places {
   zones: { id: string; name: string; hazard: string; regions: string[]; sites: number }[]
   regions: { id: string; name: string; country: string; sites: number }[]
 }
+
+export interface MemoryEntity {
+  id: string
+  name: string
+  kind: string | null
+  /** false: no node with this id in the current world. That is not the same as safe. */
+  in_world: boolean
+}
+
+export interface Memory {
+  source: 'real' | 'demo'
+  graph: string
+  incidents: { id: string; title: string; learned_on: string; outcome: string; entities: MemoryEntity[] }[]
+  lessons: { id: string; text: string; learned_on: string; incident_id: string; evidence: string[]; entities: MemoryEntity[] }[]
+  counts: { incidents: number; lessons: number }
+}

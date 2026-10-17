@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     world_graph_pristine: str = "world:pristine"
     world_graph_live: str = "world:live"
     memory_graph: str = "memory"
+    memory_graph_dryrun: str = "memory:dryrun"  # scripted (Demo) runs write here, never to `memory`
 
     mcp_api_key: str = ""
     live_runs_per_hour_per_ip: int = 5

@@ -120,6 +120,7 @@ def test_monsoon_pauses_for_approval_then_executes_verifies_and_reports():
     # Memory: the lesson is stored with the date it was learned.
     recalled = memory.recall_history(["S-VOLT-AYU"])
     assert recalled and recalled[0]["lessons"][0]["learned_on"]
+    assert recalled[0]["name"] == "VoltCell Energy Ayutthaya"           # stored from the world, not the raw id
 
 
 def test_rejection_with_feedback_re_plans():
