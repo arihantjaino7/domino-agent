@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useModel } from '../lib/model'
 import { STEPS, currentStep, useStore } from '../lib/store'
+import { useToasts } from '../lib/toasts'
 
 export function Head({ title, text, right }: { title: ReactNode; text: ReactNode; right?: ReactNode }) {
   return (
@@ -20,6 +21,7 @@ export function Progress() {
   const cur = currentStep(st)
   const s = STEPS.find((x) => x.id === cur)
   if (st.runStatus !== 'running' && st.runStatus !== 'approving') return null
+  if (st.mode === 'mcp' && st.steps.length === 0) return <span className="progress"><i className="spin" />Waiting for Claude Code</span>
   return (
     <span className="progress"><i className="spin" />{st.runStatus === 'approving' ? 'Placing the orders and checking them' : s ? `Step ${s.num}: ${s.title}` : 'Starting'}</span>
   )
@@ -46,9 +48,7 @@ export function RunPanel({ compact }: { compact?: boolean }) {
           ))}
         </div>
       )}
-      {!compact && st.mode === 'mcp' && (
-        <p className="plain" style={{ marginTop: 14 }}>Claude Code is the agent. Start watching here, then ask Claude Code to handle an alert. Every step it takes appears in this war room.</p>
-      )}
+      {!compact && st.mode === 'mcp' && <McpGuide />}
       <div className="start-actions">
         {compact && st.mode !== 'mcp' && (
           <select className="pick" aria-label="Disruption to simulate" value={st.scenario} disabled={working} onChange={(e) => st.setScenario(e.target.value)}>
@@ -60,6 +60,52 @@ export function RunPanel({ compact }: { compact?: boolean }) {
         <button type="button" className="btn btn-ghost" disabled={working} onClick={() => void st.reset()} title="Undo every disruption and order: back to the starting world">Reset the world</button>
         <Progress />
       </div>
+    </div>
+  )
+}
+
+/** The prompt a person pastes into Claude Code for the chosen scenario. */
+function mcpPrompt(alert: string) {
+  return `New alert: ${alert} Handle it as DOMINO.`
+}
+
+/**
+ * Claude Code mode: the war room cannot type into Claude Code, so it shows the exact steps and the
+ * alert to paste, with a copy button. The alert text comes from /api/scenarios.
+ */
+export function McpGuide() {
+  const st = useStore()
+  const sc = st.scenarios.find((s) => s.id === st.scenario) ?? st.scenarios[0]
+  const prompt = sc ? mcpPrompt(sc.alert) : ''
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(prompt)
+      useToasts.getState().push('Alert copied. Paste it into Claude Code.')
+    } catch {
+      useToasts.getState().push('Could not copy. Select the text and copy it by hand.')
+    }
+  }
+  return (
+    <div className="mcp-guide">
+      <p className="plain">Claude Code is the agent: it reads the alert and chooses DOMINO's tools. This war room shows each step live and asks you before anything is bought. It is free with a Claude subscription; no API key is needed.</p>
+      <ol>
+        <li>Once: run <code>make agent-workspace</code>. It creates a <code>domino-agent</code> folder next to the repo with the agent's instructions and the MCP connection.</li>
+        <li>Open a terminal in that folder and run <code>claude</code>. Allow the <code>domino</code> MCP server when asked.</li>
+        <li>Press <b>Watch Claude Code</b> below. The world resets and this page starts watching.</li>
+        <li>Pick an alert, copy it and paste it into Claude Code:</li>
+      </ol>
+      <div className="mcp-pick" role="group" aria-label="Alert to paste">
+        {st.scenarios.map((s) => (
+          <button key={s.id} type="button" className={st.scenario === s.id ? 'on' : ''} onClick={() => st.setScenario(s.id)}>{s.title}</button>
+        ))}
+      </div>
+      <div className="mcp-prompt">
+        <code>{prompt}</code>
+        <button type="button" className="btn btn-ghost" onClick={() => void copy()}>Copy</button>
+      </div>
+      <ol start={5}>
+        <li>When Claude Code says the plan is waiting, approve or reject it here, then tell Claude Code you decided.</li>
+      </ol>
     </div>
   )
 }

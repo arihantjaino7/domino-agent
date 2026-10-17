@@ -370,18 +370,29 @@ def record_lessons(ctx: RunContext, incident_id: str, lessons: list[dict[str, An
     return summary
 
 
-def _resolve_ref(ctx: RunContext, ref: str) -> bool:
-    """'R-03.totals.projected_late' must resolve to a value in this run's results."""
+def _ref_problem(ctx: RunContext, ref: str) -> str | None:
+    """None if 'R-03.totals.projected_late' resolves to a value in this run's results; otherwise what is
+    actually there at the point it stops, so the agent can fix the reference instead of dropping the number."""
     head, *path = ref.split(".")
-    node: Any = ctx.results.get(head)
+    if head not in ctx.results:
+        return f"{head} is not a result id in this run (ids: {', '.join(sorted(ctx.results))})"
+    node: Any = ctx.results[head]
+    at = head
     for key in path:
         if isinstance(node, dict) and key in node:
             node = node[key]
         elif isinstance(node, list) and key.isdigit() and int(key) < len(node):
             node = node[int(key)]
+        elif isinstance(node, dict):
+            return f"{at} has no key '{key}'; its keys are: {', '.join(sorted(map(str, node))[:40])}"
+        elif isinstance(node, list):
+            hit = next((i for i, item in enumerate(node) if isinstance(item, dict) and key in map(str, item.values())), None)
+            hint = f"; '{key}' is item {hit}, so use {at}.{hit}" if hit is not None else f", e.g. {at}.0"
+            return f"{at} is a list of {len(node)} items; use an index from 0 to {len(node) - 1}{hint}"
         else:
-            return False
-    return node is not None
+            return f"{at} is a single value ({node!r}), so '{key}' cannot follow it"
+        at = f"{at}.{key}"
+    return None if node is not None else f"{ref} is empty (null)"
 
 
 # Numbers that are part of a name, not a quantity: ids (INC-0002, DEC-...-v2), evidence and result refs (E4, R-03),
@@ -463,8 +474,9 @@ def submit_incident_report(ctx: RunContext, headline: str, outcome: str, claims:
             elif ent not in ctx.seen_ids and ent not in on_paths:
                 errors.append(f"claim {i}: {ent} does not appear in this run's tool results")
         for ref in c.get("metric_refs", []):
-            if not _resolve_ref(ctx, ref):
-                errors.append(f"claim {i}: metric_ref {ref} does not resolve in this run's results")
+            problem = _ref_problem(ctx, ref)
+            if problem:
+                errors.append(f"claim {i}: metric_ref {ref} does not resolve: {problem}")
         for found in GUARDED_ID.findall(c.get("text", "")):
             if found not in ctx.seen_ids:
                 errors.append(f"claim {i}: text mentions {found}, which no tool returned (entity guard)")

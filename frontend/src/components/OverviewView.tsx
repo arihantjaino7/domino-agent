@@ -4,7 +4,7 @@ import { COL, COUNTRY, RANK, cap1, fmt, plural, usd, useModel, type Model } from
 import { useStore } from '../lib/store'
 import type { NodeStatus } from '../lib/types'
 import { GEO, PLANT_GEO } from '../lib/geo'
-import { Progress, RunPanel } from './Controls'
+import { McpGuide, Progress, RunPanel } from './Controls'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -210,6 +210,8 @@ export function OverviewView({ go }: { go: (v: ViewId) => void }) {
   const site = m.site
   const rec = m.rec
   const t1 = d.tier1View ?? 0, mt = d.exposedTier1.length
+  // Claude Code mode before its first tool call: the war room is only waiting, nothing is running yet.
+  const waiting = st.mode === 'mcp' && m.phase === 'running' && m.steps.length === 0
   let h1: string, lede: string
   if (m.phase === 'idle' || !T) {
     h1 = 'Your supply chain is running normally.'
@@ -217,6 +219,9 @@ export function OverviewView({ go }: { go: (v: ViewId) => void }) {
   } else if (m.noExposure) {
     h1 = d.report?.headline ?? 'Nothing in your supply chain is affected.'
     lede = 'DOMINO checked the graph and found no supplier of yours in the affected area. Not being in the graph does not mean safe, so the report says so.'
+  } else if (waiting) {
+    h1 = 'Waiting for Claude Code.'
+    lede = 'Paste the alert into Claude Code. Its first tool call appears here a few seconds after you send it.'
   } else if (!ready) {
     h1 = d.declared ? `A ${m.kind} stopped ${site ? m.short(site.id) : 'a supplier'}. DOMINO is tracing who is affected.` : 'DOMINO is reading the alert.'
     lede = d.alert ?? ''
@@ -246,6 +251,13 @@ export function OverviewView({ go }: { go: (v: ViewId) => void }) {
           <div><b>{usd(fees ?? 0)}</b><span>{m.executed ? 'late fees with the plan' : 'late fees if nobody acts'}</span></div>
         </div>
       </section>
+
+      {waiting && (
+        <div className="card" style={{ marginBottom: 16 }}><div className="card-b">
+          <div className="side-h"><h2>Now paste the alert into Claude Code</h2><span className="sub">Claude Code drives DOMINO</span></div>
+          <McpGuide />
+        </div></div>
+      )}
 
       {(m.phase === 'idle' || m.phase === 'failed' || (m.phase === 'done' && !d.declared)) && (
         <div className="card" style={{ marginBottom: 16 }}><div className="card-b">

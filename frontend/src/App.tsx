@@ -89,7 +89,8 @@ function TopBar({ view, go }: { view: ViewId; go: (v: ViewId) => void }) {
   const working = m.phase === 'running' || m.phase === 'approving' || busy
   const inc = m.d.declared?.incident_id
   const state =
-    m.phase === 'idle' ? ['none', 'No disruption'] : m.phase === 'running' ? ['covered', 'DOMINO is working'] : m.phase === 'awaiting' ? ['covered', 'Waiting for your OK']
+    m.phase === 'idle' ? ['none', 'No disruption'] : m.phase === 'running' && mode === 'mcp' && m.steps.length === 0 ? ['covered', 'Waiting for Claude Code']
+      : m.phase === 'running' ? ['covered', 'DOMINO is working'] : m.phase === 'awaiting' ? ['covered', 'Waiting for your OK']
       : m.phase === 'approving' ? ['covered', 'Placing the orders'] : m.phase === 'failed' ? ['disrupted', 'Run stopped'] : m.executed ? ['protected', 'Plan approved and checked'] : ['protected', 'Run complete']
   const MODES: [Mode, string, string][] = [['scripted', 'Demo', 'Free offline demo run'], ['replay', 'Replay', 'Watch a recorded run: free, and nothing in the graph changes'], ['mcp', 'Claude Code', 'Claude Code drives DOMINO over MCP; you watch here'], ['api', 'Claude API', 'Claude runs in the backend (paid)']]
   return (

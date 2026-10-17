@@ -428,3 +428,13 @@ select.pick { height: 34px; padding: 0 30px 0 12px; border-radius: 99px; backgro
 .mem-ents { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 6px; }
 .mem-ent { font-size: 11.5px; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--line); color: var(--ink-2); }
 .mem-ent.gone { border-style: dashed; color: var(--muted); }
+
+/* Claude Code mode: steps and the alert to paste */
+.mcp-guide ol { margin: 12px 0 0; padding-left: 20px; display: grid; gap: 6px; font-size: 13.5px; line-height: 1.55; color: var(--ink-2); }
+.mcp-guide code { font-family: var(--mono, ui-monospace, monospace); font-size: 12.5px; }
+.mcp-pick { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 0 20px; }
+.mcp-pick button { height: 28px; padding: 0 12px; border-radius: 99px; font-size: 12.5px; border: 1px solid var(--line); color: var(--muted); }
+.mcp-pick button.on { background: var(--surface-3); color: var(--ink); }
+.mcp-prompt { display: flex; gap: 10px; align-items: flex-start; margin: 10px 0 0 20px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); }
+.mcp-prompt code { flex: 1; white-space: pre-wrap; word-break: break-word; color: var(--ink); line-height: 1.5; }
+@media (max-width: 760px) { .mcp-pick, .mcp-prompt { margin-left: 0; } .mcp-prompt { flex-direction: column; } }

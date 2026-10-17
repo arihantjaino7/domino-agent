@@ -191,6 +191,10 @@ def test_report_rejects_invented_evidence_unresolved_metrics_and_unseen_ids():
     right = _report(run.id, claims=[{"type": "late", "text": f"{late} orders will be late in tier 1 and tier-2 plants.",
                                      "entities": [], "evidence_ids": [], "metric_refs": [f"{ref}.totals.projected_late"]}])
     assert not right.is_error, right.content[0].text
+    # A wrong key is explained: the error names the keys that exist there, so the agent can fix the ref.
+    wrong_key = _report(run.id, claims=[{"type": "late", "text": "Penalties.", "entities": [], "evidence_ids": [],
+                                         "metric_refs": [f"{ref}.totals.penalty_usd"]}])
+    assert wrong_key.is_error and "penalty_exposure_usd" in wrong_key.content[0].text
     zero = _report(run.id, claims=[{"type": "late", "text": "0 orders will be late.", "entities": [],
                                     "evidence_ids": [], "metric_refs": [f"{ref}.totals.projected_late"]}])
     assert zero.is_error and "number guard" in zero.content[0].text

@@ -311,7 +311,16 @@ export const useStore = create<State>((set, get) => ({
 
   load: async () => {
     try {
-      const [graph, summary, scenarios, places] = await Promise.all([api.graph(), api.summary(), api.scenarios(), api.places()])
+      // The backend may still be starting (make dev starts both at once): retry a few times before giving up.
+      const fetchAll = () => Promise.all([api.graph(), api.summary(), api.scenarios(), api.places()])
+      let all: Awaited<ReturnType<typeof fetchAll>> | null = null
+      for (let attempt = 1; !all; attempt++) {
+        try { all = await fetchAll() } catch (e) {
+          if (attempt >= 8) throw e
+          await new Promise((r) => setTimeout(r, 1500))
+        }
+      }
+      const [graph, summary, scenarios, places] = all
       set({ graph, summary, scenarios, places, error: null, ready: true, derived: derive(graph, summary, get().steps, get().events) })
       api.replays().then((replays) => set((s) => ({ replays, replayId: s.replayId ?? replays[0]?.id ?? null })), () => { /* replays are optional */ })
     } catch (e) {
