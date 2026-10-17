@@ -172,7 +172,7 @@ function InjectMenu({ disabled }: { disabled: boolean }) {
       <button type="button" className="btn btn-ghost" disabled={disabled || !places} aria-expanded={open} onClick={() => setOpen((o) => !o)}>Stop a region by hand</button>
       {open && places && (
         <div role="menu" className="menu">
-          <p>Every site in the area stops for 21 days, right now. Claude Code (watch mode) sees it on its next run. A demo run starts again from a fresh world.</p>
+          <p>Every site in the area stops for 21 days, right now, and the views show what follows. Starting a run (Run the demo or Watch Claude Code) resets the world first, so this stop does not carry into a run.</p>
           {places.zones.map((z) => (
             <button key={z.id} type="button" role="menuitem" onClick={() => { setOpen(false); void inject(z.id, z.name) }}>
               <span>{z.name} <span className="muted">{z.hazard}</span></span>
