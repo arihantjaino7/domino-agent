@@ -400,6 +400,13 @@ def verify_execution(ctx: RunContext, decision_id: str) -> dict[str, Any]:
 
 def record_lessons(ctx: RunContext, incident_id: str, lessons: list[dict[str, Any]]) -> dict[str, Any]:
     _need_incident(ctx, incident_id)
+    # A lesson with no entity_ids is linked to nothing, so recall_history could never find it again.
+    for i, l in enumerate(lessons):
+        if not isinstance(l, dict) or not str(l.get("text", "")).strip() or not isinstance(l.get("entity_ids"), list) \
+                or not l["entity_ids"]:
+            got = sorted(l) if isinstance(l, dict) else type(l).__name__
+            raise ToolInputError(f"lesson {i} must be {{text, entity_ids: [ids], evidence_ids: [E-ids]}} with at least "
+                                 f"one entity id (got {got}); without entity_ids it could never be recalled")
     ids = sorted({e for l in lessons for e in l.get("entity_ids", [])})
     if ids:
         require_ids(ctx, ids)

@@ -39,3 +39,15 @@ change it **only** through the `domino` MCP tools. Do not read or write files, r
 - If nothing in the graph matches the alert, say it is **not in the graph** (it may not be modelled, which
   is not the same as safe), report with outcome `not_in_graph`, and stop.
 - Keep your messages short: what you found, with result ids and evidence ids.
+
+## Tool arguments (use these names exactly)
+- `resolve_entities(terms: [names])` · `declare_incident(entity_ids: [ids], kind, title, duration_days, capacity_factor=0)`
+- `trace_exposure(incident_id)` · `explain_shared_dependencies(incident_id)` · `project_shortages(horizon=42)`
+- `recall_history(entity_ids: [ids])` · `get_entity_context(entity_id)`
+- `compute_true_capacity(component_id, plant_id)` · `find_alternatives(component_id, plant_id)` (one part and plant per call)
+- `simulate_strategies(budget_usd=null)` · `submit_plan_for_approval(strategy_id, rationale, evidence_ids)`
+- `get_decision_status(decision_id)` · `verify_execution(decision_id)`
+- `record_lessons(incident_id, lessons: [{text, entity_ids: [ids], evidence_ids: [E-ids]}])`
+- `submit_incident_report(headline, outcome, claims: [{type, text, entities, evidence_ids, metric_refs}], decision_id)`;
+  `outcome` is one of answered_with_path, answered_from_memory, not_in_graph, unknown_entity; claim `type` is one of
+  depends_on, exposed, late, rejected, protected, capacity, not_in_graph.

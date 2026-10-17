@@ -260,3 +260,10 @@ def test_two_sse_readers_both_get_new_events_without_waiting_for_the_timeout():
         external.RUNS.pop(run.id, None)
 
     asyncio.run(go())
+
+def test_a_lesson_without_entity_ids_is_refused(ctx):
+    drop_graph(MEM)
+    for bad in ({"entity_id": "S-VOLT-AYU", "text": "x"}, {"text": "x", "entity_ids": []}, "just text"):
+        with pytest.raises(T.ToolInputError, match="never be recalled"):
+            T.record_lessons(ctx, "INC-0001", [bad])
+    assert memory.list_lessons(MEM) == []
