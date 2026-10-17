@@ -147,7 +147,7 @@ export function AgentView() {
   const selCalls = sel ? m.steps.filter((s) => sel.tools.includes(s.tool)) : []
   return (
     <>
-      <Head title="How the AI agent worked" text="DOMINO works in seven steps. It only uses fixed, safe tools on the graph, and it never changes anything without your OK. Click a step to see exactly what it ran, including the database queries." />
+      <Head title="How the AI agent worked" text="DOMINO works in seven steps. It only uses fixed, safe tools on the graph, and it never places a purchase order without your OK. Click a step to see exactly what it ran, including the database queries." />
       <div className="agent-grid">
         <div className={`canvas ${intro ? 'intro' : ''}`} ref={canvas} style={{ height }} key={intro}>
           <svg className="canvas-svg">
@@ -242,7 +242,7 @@ export function AgentView() {
               {strat.map((s) => (
                 <div className={`strat ${s.strategy === m.sim.recommended ? 'rec' : ''}`} key={s.strategy}><span className="mono">{s.strategy}</span>
                   <div><div style={{ display: 'flex', justifyContent: 'space-between' }}><span>{s.name}</span><span className="num">{s.late} late</span></div><div className="bar"><i style={{ width: `${(s.late / maxLate) * 100}%` }} /></div></div>
-                  <span className="num" style={{ textAlign: 'right' }}>{usd(s.spend_cents)}</span><span style={{ textAlign: 'right' }}>{s.strategy === m.sim.recommended && <span className="tag"><i className="dot st-protected" />best</span>}</span></div>
+                  <span className="num" style={{ textAlign: 'right' }}>{usd(s.spend_cents)}</span><span style={{ textAlign: 'right' }}>{s.strategy === m.sim.recommended && <span className="tag"><i className="dot st-protected" />recommended</span>}</span></div>
               ))}</div></div>
           )}
           {m.steps.length > 0 && (

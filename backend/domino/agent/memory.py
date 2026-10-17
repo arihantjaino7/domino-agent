@@ -9,6 +9,7 @@ import datetime as dt
 from typing import Any
 
 from domino.config import settings
+from domino.graph.client import get_db
 from domino.graph.run_query import run_query
 
 
@@ -35,9 +36,17 @@ def record_lessons(incident_id: str, lessons: list[dict[str, Any]], graph: str |
     return [r["id"] for r in rows]
 
 
+def _exists(graph: str) -> bool:
+    """Nothing learned yet (fresh deploy): FalkorDB has no key for the graph, and querying it errors."""
+    return graph in get_db().list_graphs()
+
+
 def recall_history(entity_ids: list[str], graph: str | None = None) -> list[dict[str, Any]]:
-    out = []
-    for r in run_query("memory/recall", {"entity_ids": sorted(set(entity_ids))}, graph=graph or settings.memory_graph):
+    out: list[dict[str, Any]] = []
+    g = graph or settings.memory_graph
+    if not _exists(g):
+        return out
+    for r in run_query("memory/recall", {"entity_ids": sorted(set(entity_ids))}, graph=g):
         out.append({"entity": r["entity"], "name": r["name"], "reliability": r["reliability"],
                     "incidents": [i for i in r["incidents"] if i.get("id")],
                     "lessons": [l for l in r["lessons"] if l.get("text")]})
@@ -45,12 +54,14 @@ def recall_history(entity_ids: list[str], graph: str | None = None) -> list[dict
 
 
 def list_incidents(graph: str | None = None) -> list[dict[str, Any]]:
-    return run_query("memory/incidents", graph=graph or settings.memory_graph)
+    g = graph or settings.memory_graph
+    return run_query("memory/incidents", graph=g) if _exists(g) else []
 
 
 def list_lessons(graph: str | None = None) -> list[dict[str, Any]]:
     """Every lesson, newest first; `evidence` is split back into the evidence ids it cited."""
-    rows = run_query("memory/lessons", graph=graph or settings.memory_graph)
+    g = graph or settings.memory_graph
+    rows = run_query("memory/lessons", graph=g) if _exists(g) else []
     return [{**r, "evidence": [e for e in (r["evidence"] or "").split(",") if e]} for r in rows]
 
 

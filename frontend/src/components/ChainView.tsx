@@ -137,7 +137,7 @@ function Chain({ m, lens, after }: { m: Model; lens: 'tier1' | 'domino'; after: 
             <text x={x + 16} y={y + 26} fontSize={13} fontWeight={500} fill={hidden ? '#5d5b56' : '#edebe6'}>{title.length > 24 ? `${title.slice(0, 23)}…` : title}</text>
             <text x={x + 16} y={y + 45} fontSize={11.5} fill="#8f8d87">{sub}</text>
             {right && !t1lens && <text x={x + CW - 12} y={y + 45} textAnchor="end" fontSize={11} style={{ fill: COL[sv] }}>{right}</text>}
-            {hidden && <text x={x + CW / 2} y={y + CH + 20} textAnchor="middle" fontSize={11.5} fill="#8f8d87">A normal tool cannot see this</text>}
+            {hidden && <text x={x + CW / 2} y={y + CH + 20} textAnchor="middle" fontSize={11.5} fill="#8f8d87">A tier-1 view cannot see this</text>}
           </g>
         )
       }))}
@@ -170,7 +170,7 @@ export function ChainView() {
         right={
           <div className="head-toggles">
             <div className="chip-toggle" role="group" aria-label="Who is looking">
-              <button type="button" className={lens === 'tier1' ? 'on' : ''} onClick={() => setLens('tier1')}>Normal tool</button>
+              <button type="button" className={lens === 'tier1' ? 'on' : ''} onClick={() => setLens('tier1')}>Tier-1 view</button>
               <button type="button" className={lens === 'domino' ? 'on' : ''} onClick={() => setLens('domino')}>DOMINO</button>
             </div>
             {m.executed && (
@@ -183,7 +183,7 @@ export function ChainView() {
         } />
       <div className="net-grid stacked">
         <div className="card net-card">
-          {lens === 'tier1' && <div className="net-note">A normal tool only knows the suppliers you buy from directly. Without the first column it finds {d.tier1View ?? 0} problems.</div>}
+          {lens === 'tier1' && <div className="net-note">A tier-1 view only knows the suppliers you buy from directly. Without the first column it finds {d.tier1View ?? 0} problems.</div>}
           <div className="net-scroll"><Chain m={m} lens={lens} after={after} /></div>
           <div className="sub" style={{ padding: '0 18px 10px' }}>Each small dot above a column is one company, {fmt(total)} in total. Coloured dots are on the path and are shown as cards. Hover a dot to see its name.</div>
           <div className="map-legend" style={{ margin: '0 18px 16px' }}><span><i className="dot st-disrupted" />Stopped</span><span><i className="dot st-late" />Will be late</span><span><i className="dot st-covered" />In danger</span><span><i className="dot st-protected" />{m.executed ? 'Protected (projected)' : 'Rescue in the plan'}</span><span><i className="dot" />Not affected</span></div>

@@ -121,6 +121,10 @@ class ScriptedClient:
         inc = declared["incident_id"]
         if self._last("trace_exposure") is None:
             return self._call(("trace_exposure", {"incident_id": inc}))
+        traced = self._last("trace_exposure")
+        on_paths = sorted({n for e in traced["evidence"] for n in e["path"] if n.startswith("S-")})
+        if on_paths and self._last("recall_history") is None:
+            return self._call(("recall_history", {"entity_ids": on_paths}))
         if self._last("project_shortages") is None:
             return self._call(("project_shortages", {}))
         short = self._last("project_shortages")

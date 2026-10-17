@@ -15,7 +15,7 @@ import re
 from typing import Any
 
 from domino.agent import memory
-from domino.agent.context import GUARDED_ID, RunContext
+from domino.agent.context import ANY_ID, GUARDED_ID, RunContext
 from domino.allocators.strategies import PRESETS
 from domino.engines.alternatives import find_alternatives as _find_alternatives
 from domino.engines.capacity import compute_true_capacity as _true_capacity
@@ -384,10 +384,69 @@ def _resolve_ref(ctx: RunContext, ref: str) -> bool:
     return node is not None
 
 
+# Numbers that are part of a name, not a quantity: ids (INC-0002, DEC-...-v2), evidence and result refs (E4, R-03),
+# strategy and check names (S4, V1), tiers (tier-1). Everything else that looks like a number is a stated value.
+_NAME_WITH_DIGITS = re.compile(ANY_ID.pattern + r"|\b[A-Za-z]+-?\d+[A-Za-z0-9-]*\b"
+                               r"|\btiers?\s+\d+(?:\s*(?:,|and|or|to|-|–)\s*\d+)*", re.IGNORECASE)
+_STATED_NUMBER = re.compile(r"\d+(?:,\d{3})*(?:\.\d+)?(?:\s?[KkMm%](?!\w))?")
+
+
+def _ref_values(ctx: RunContext, refs: list[str]) -> list[float]:
+    """Every number under the given metric refs (cents also as dollars, list lengths, numbers inside strings)."""
+    out: list[float] = []
+
+    def walk(node: Any, key: str, depth: int = 0) -> None:
+        if len(out) > 20_000 or depth > 8:
+            return
+        if isinstance(node, bool) or node is None:
+            return
+        if isinstance(node, (int, float)):
+            out.append(float(node))
+            if key.endswith("cents"):
+                out.append(node / 100)  # prose states dollars
+        elif isinstance(node, str):
+            out.extend(float(m.replace(",", "")) for m in re.findall(r"\d+(?:,\d{3})*(?:\.\d+)?", node))
+        elif isinstance(node, dict):
+            for k, v in node.items():
+                walk(v, str(k), depth + 1)
+        elif isinstance(node, list):
+            out.append(float(len(node)))  # "4 POs" may count a list
+            for v in node:
+                walk(v, key, depth + 1)
+
+    for ref in refs:
+        head, *path = ref.split(".")
+        node: Any = ctx.results.get(head)
+        for key in path:
+            node = node.get(key) if isinstance(node, dict) else (
+                node[int(key)] if isinstance(node, list) and key.isdigit() and int(key) < len(node) else None)
+        walk(node, path[-1] if path else "")
+    return out
+
+
+def _unsupported_numbers(text: str, values: list[float]) -> list[str]:
+    """Stated numbers in `text` that no cited value supports, allowing for the rounding the text shows
+    ("$289K" matches 288,500 to 289,499; "99.1%" matches 99.1 or 0.991)."""
+    bad = []
+    for tok in _STATED_NUMBER.findall(_NAME_WITH_DIGITS.sub(" ", text)):
+        t = tok.replace(" ", "")
+        suffix = t[-1] if t[-1] in "KkMm%" else ""
+        digits = t[:-1] if suffix else t
+        x = float(digits.replace(",", ""))
+        decimals = len(digits.split(".")[1]) if "." in digits else 0
+        scale = {"k": 1e3, "m": 1e6}.get(suffix.lower(), 1.0)
+        tol = 0.5 * 10 ** -decimals * scale + 1e-9
+        targets = [x * scale] + ([x / 100] if suffix == "%" else [])
+        if not any(abs(tgt - v) <= (tol if tgt == x * scale else tol / 100) for tgt in targets for v in values):
+            bad.append(tok.strip())
+    return bad
+
+
 def submit_incident_report(ctx: RunContext, headline: str, outcome: str, claims: list[dict[str, Any]],
                            decision_id: str | None = None, open_risks: list[str] | None = None,
                            lessons: list[str] | None = None) -> dict[str, Any]:
-    errors = []
+    errors: list[str] = []
+    all_values: list[float] = []
     if outcome not in OUTCOMES:
         errors.append(f"outcome must be one of {OUTCOMES}")
     for i, c in enumerate(claims):
@@ -409,9 +468,17 @@ def submit_incident_report(ctx: RunContext, headline: str, outcome: str, claims:
         for found in GUARDED_ID.findall(c.get("text", "")):
             if found not in ctx.seen_ids:
                 errors.append(f"claim {i}: text mentions {found}, which no tool returned (entity guard)")
+        # Number guard: a resolvable metric_ref is not enough; the prose must state the value it points to.
+        values = _ref_values(ctx, c.get("metric_refs", []))
+        all_values += values
+        for num in _unsupported_numbers(c.get("text", ""), values):
+            errors.append(f"claim {i}: text states {num}, which is not a value at its metric_refs "
+                          f"{c.get('metric_refs', [])} (number guard)")
     for found in GUARDED_ID.findall(headline):
         if found not in ctx.seen_ids:
             errors.append(f"headline mentions {found}, which no tool returned (entity guard)")
+    for num in _unsupported_numbers(headline, all_values):
+        errors.append(f"headline states {num}, which no claim's metric_refs support (number guard)")
     if decision_id and (not ctx.pending or ctx.pending["decision_id"] != decision_id):
         errors.append(f"decision_id {decision_id} is not this run's decision")
     if errors:

@@ -13,7 +13,6 @@ from fastapi import APIRouter
 
 from domino.agent import memory
 from domino.config import settings
-from domino.graph.client import get_db
 
 router = APIRouter(prefix="/api")
 
@@ -24,10 +23,8 @@ def _graph_for(source: str) -> str:
 
 def _memory(source: str) -> dict[str, Any]:
     g = _graph_for(source)
-    # Nothing learned yet (fresh deploy): FalkorDB has no key for the graph, so there is nothing to query.
-    exists = g in get_db().list_graphs()
-    incidents = memory.list_incidents(graph=g) if exists else []
-    lessons = memory.list_lessons(graph=g) if exists else []
+    incidents = memory.list_incidents(graph=g)   # both return [] while the graph does not exist yet
+    lessons = memory.list_lessons(graph=g)
     ids = {e for row in incidents + lessons for e in row["entities"] if e}
     names = memory.entity_names(sorted(ids), settings.world_graph_live)
 

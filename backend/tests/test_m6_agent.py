@@ -123,6 +123,22 @@ def test_monsoon_pauses_for_approval_then_executes_verifies_and_reports():
     assert recalled[0]["name"] == "VoltCell Energy Ayutthaya"           # stored from the world, not the raw id
 
 
+def test_a_later_run_recalls_the_earlier_runs_lesson_with_its_date():
+    drop_graph(MEM)
+    first, client = _run("monsoon")
+    recall = next(r for r in get_context(first.id).results.values() if "memories" in r)
+    assert recall["outcome"] == "nothing_remembered"              # nothing learned yet
+    _resume(approve, first, client, "tester")
+    assert first.status == "completed", first.error
+
+    copy_graph(PRISTINE, WORLD)                                  # world reset; memory survives
+    second, _ = _run("monsoon")
+    recall = next(r for r in get_context(second.id).results.values() if "memories" in r)
+    assert recall["outcome"] == "answered_from_memory"
+    volt = next(m for m in recall["memories"] if m["entity"] == "S-VOLT-AYU")
+    assert volt["lessons"] and all(l["learned_on"] for l in volt["lessons"])
+
+
 def test_rejection_with_feedback_re_plans():
     run, client = _run("monsoon")
     first = get_context(run.id).pending["decision_id"]
@@ -166,6 +182,18 @@ def test_report_rejects_invented_evidence_unresolved_metrics_and_unseen_ids():
     guard = _report(run.id, claims=[{"type": "late", "text": "S-NOPE-XYZ will fail", "entities": [],
                                      "evidence_ids": [], "metric_refs": []}])
     assert guard.is_error and "entity guard" in guard.content[0].text
+    # Number guard: a valid metric_ref does not make any number in the prose true.
+    ref = next(k for k, v in ctx.results.items() if isinstance(v, dict) and "projected_late" in v.get("totals", {}))
+    late = ctx.results[ref]["totals"]["projected_late"]
+    wrong = _report(run.id, claims=[{"type": "late", "text": f"{late + 986} orders will be late.", "entities": [],
+                                     "evidence_ids": [], "metric_refs": [f"{ref}.totals.projected_late"]}])
+    assert wrong.is_error and "number guard" in wrong.content[0].text and str(late + 986) in wrong.content[0].text
+    right = _report(run.id, claims=[{"type": "late", "text": f"{late} orders will be late in tier 1 and tier-2 plants.",
+                                     "entities": [], "evidence_ids": [], "metric_refs": [f"{ref}.totals.projected_late"]}])
+    assert not right.is_error, right.content[0].text
+    zero = _report(run.id, claims=[{"type": "late", "text": "0 orders will be late.", "entities": [],
+                                    "evidence_ids": [], "metric_refs": [f"{ref}.totals.projected_late"]}])
+    assert zero.is_error and "number guard" in zero.content[0].text
 
 
 # ---------------------------------------------------------------------------

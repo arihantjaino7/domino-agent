@@ -265,7 +265,7 @@ function announce(ev: RunEvent) {
   if (ev.type === 'tool.result' && !ev.data.is_error) {
     const ui = ev.data.ui
     if (ev.data.tool === 'declare_incident' && ui) toast(`${ui.incident_id} declared: ${ui.site_ids?.length} site(s) stopped`)
-    if (ev.data.tool === 'trace_exposure' && ui) toast(`A normal tool sees ${ui.tier1_view?.directly_affected_tier1} problems. DOMINO found ${ui.multi_tier?.exposed_tier1} suppliers in trouble.`)
+    if (ev.data.tool === 'trace_exposure' && ui) toast(`A tier-1 view sees ${ui.tier1_view?.directly_affected_tier1} problems. DOMINO found ${ui.multi_tier?.exposed_tier1} suppliers in trouble.`)
   }
   if (ev.type === 'approval.required') toast('A rescue plan is ready. It needs your OK.')
   if (ev.type === 'action.executed') toast(ev.data.receipt?.summary ?? 'Plan executed')

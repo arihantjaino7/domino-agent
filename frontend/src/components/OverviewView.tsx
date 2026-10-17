@@ -257,15 +257,15 @@ export function OverviewView({ go }: { go: (v: ViewId) => void }) {
       <section className="ov-main">
         <div className="card map-card">
           <div className="map-head">
-            <div><h2>What is happening, step by step</h2><div className="sub">{lens === 'domino' ? (ready ? 'Hover a step below to see it on the map.' : 'Places with suppliers. Colours appear as DOMINO finds problems.') : 'This is all a normal tool can see.'}</div></div>
+            <div><h2>What is happening, step by step</h2><div className="sub">{lens === 'domino' ? (ready ? 'Hover a step below to see it on the map.' : 'Places with suppliers. Colours appear as DOMINO finds problems.') : 'This is all a tier-1 view can see.'}</div></div>
             <div className="chip-toggle" role="group" aria-label="Who is looking">
-              <button type="button" className={lens === 'tier1' ? 'on' : ''} onClick={() => setLens('tier1')}>Normal tool</button>
+              <button type="button" className={lens === 'tier1' ? 'on' : ''} onClick={() => setLens('tier1')}>Tier-1 view</button>
               <button type="button" className={lens === 'domino' ? 'on' : ''} onClick={() => setLens('domino')}>DOMINO</button>
             </div>
           </div>
           <div className="board-stage">
             <Board m={m} lens={lens} focus={lens === 'domino' ? focus : null} />
-            {lens === 'tier1' && d.trace && <div className="board-caption">A normal tool only checks the suppliers you buy from directly. It finds <b>{t1}</b> problems, because the stopped site is one step further back.</div>}
+            {lens === 'tier1' && d.trace && <div className="board-caption">A tier-1 view only checks the suppliers you buy from directly. It finds <b>{t1}</b> problems, because the stopped site is one step further back.</div>}
           </div>
           {lens === 'domino' && ready ? (
             <ol className="map-steps">
@@ -333,9 +333,9 @@ export function OverviewView({ go }: { go: (v: ViewId) => void }) {
                 <p className="plain">{m.short(deps.site)} sends {m.partOf(deps.site)[1]} to {deps.fan_out} of your suppliers. One {m.kind} hits all of them.</p>
                 <div className="feed-list">{deps.dependents.map((x: string) => <div className="feed-item" key={x}><i className={`dot st-${m.status(x)}`} />{m.name(x)}</div>)}</div></div></div>
             )}
-            <div className="card"><div className="card-b"><div className="side-h"><h3>What a normal tool misses</h3></div>
+            <div className="card"><div className="card-b"><div className="side-h"><h3>What a tier-1 view misses</h3></div>
               <div className="lens-compare">
-                <div><span className="sub">Normal tool</span><b>{t1}</b><span className="sub">suppliers in trouble</span></div>
+                <div><span className="sub">Tier-1 view</span><b>{t1}</b><span className="sub">suppliers in trouble</span></div>
                 <div style={{ boxShadow: 'inset 0 0 0 1px var(--accent-soft)' }}><span className="sub">DOMINO</span><b>{mt}</b><span className="sub">suppliers in trouble</span></div>
               </div>
               <div className="sub" style={{ marginTop: 8 }}>If a site is not in your data, it is not automatically safe.</div></div></div>
@@ -365,7 +365,7 @@ function FixCard({ m, go }: { m: Model; go: (v: ViewId) => void }) {
     return (
       <div className="card fix-card"><div className="card-b">
         <div className="side-h"><h2>The fix</h2></div>
-        <p className="plain">{m.noExposure ? 'DOMINO found no order of yours to protect. Not being in the graph does not mean safe, so check suppliers that are not in it.' : m.phase === 'idle' ? 'When a disruption hits, DOMINO tests five plans and brings you the best one here.' : 'DOMINO is still testing plans.'}</p>
+        <p className="plain">{m.noExposure ? 'DOMINO found no order of yours to protect. Not being in the graph does not mean safe, so check suppliers that are not in it.' : m.phase === 'idle' ? 'When a disruption hits, DOMINO tests five plans on copies of the graph and puts the one it recommends here for your OK.' : 'DOMINO is still testing plans.'}</p>
         {(m.phase === 'running') && <div style={{ marginTop: 10 }}><Progress /></div>}
       </div></div>
     )
