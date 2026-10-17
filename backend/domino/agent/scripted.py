@@ -144,6 +144,8 @@ class ScriptedClient:
             return self._call(("submit_plan_for_approval", {
                 "strategy_id": self.strategy, "evidence_ids": evidence,
                 "rationale": "Protects the most penalty-weighted orders within budget in the sandbox comparison."}))
+        if "could not proceed" in note:  # approval failed (e.g. the world changed): stop instead of guessing
+            return self._done("The approval could not proceed because the world changed; a new run is needed.")
         decision = submitted[-1]["decision_id"]
         if self._last("verify_execution") is None:
             return self._call(("verify_execution", {"decision_id": decision}))

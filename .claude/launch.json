@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "domino-dev",
+      "runtimeExecutable": "uv",
+      "runtimeArgs": ["run", "--project", "backend", "python", "scripts/dev.py"],
+      "port": 5173
+    }
+  ]
+}

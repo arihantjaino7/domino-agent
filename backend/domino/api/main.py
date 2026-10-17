@@ -12,6 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from mcp.server.transport_security import TransportSecuritySettings
 
 from domino.api.runs import router as runs_router
+from domino.api.world import router as world_router
 from domino.config import settings
 from domino.graph.client import ping
 from domino.mcp.server import mcp
@@ -71,6 +72,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="DOMINO", lifespan=lifespan)
 app.include_router(runs_router)
+app.include_router(world_router)
 
 
 @app.get("/api/health")

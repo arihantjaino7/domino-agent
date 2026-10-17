@@ -200,3 +200,23 @@ def test_http_run_streams_events_and_resumes_after_approval(monkeypatch):
         kinds = [e["type"] for e in events]
         assert kinds[0] == "run.started" and "tool.called" in kinds and kinds[-1] == "run.completed"
         assert [e["seq"] for e in events] == sorted(e["seq"] for e in events)
+
+
+def test_loop_stops_after_repeated_tool_errors():
+    class Stubborn(ScriptedClient):
+        def next_message(self, messages):
+            self._absorb(messages)
+            return self._call(("trace_exposure", {"incident_id": "INC-9999"}))
+
+    run, _ = _run("monsoon", client=Stubborn("monsoon"))
+    assert run.status == "failed" and "tool errors in a row" in run.error
+    assert run.tool_calls == 3
+
+
+def test_approval_on_a_changed_world_does_not_execute():
+    run, client = _run("monsoon")
+    copy_graph(PRISTINE, WORLD)  # someone resets the world while the plan waits for approval
+    _resume(approve, run, client, "tester")
+    assert get_context(run.id).receipt is None
+    assert not run_query("upstream/purchase_orders", graph=WORLD)
+    assert any(e["type"] == "approval.failed" for e in run.events)

@@ -1,6 +1,6 @@
 # Overnight status and morning handover (Oct 16 → 17)
 
-**State: M2-M5 done and verified. M6 built and tested with a free scripted model (the real Claude run is NOT tried yet). M7 deploy files built and tested locally, NOT deployed. All committed and pushed.**
+**State: M2-M5 done and verified. M6 built and tested with a free scripted model (the real Claude run is NOT tried yet). M7 deploy files built and tested locally, NOT deployed. M8 step 1 (war-room screen) built and checked in a browser. All committed and pushed.**
 
 ## Commits
 - `04d9bf1` M2: world generator, loader and schema
@@ -138,4 +138,11 @@ KantoC:in  --600--> KantoC:out  --600--> KantoP:in --600--> KantoP:out --300--> 
 ## Next step (when you're back)
 - Run the real model once (`make demo-headless SCENARIO=monsoon`) and check the cost and the report.
 - Deploy with `docs/DEPLOY.md` when you have the VPS.
-- Then M8: the war-room UI (needs your eyes after each of its 3 steps).
+- Look at M8 step 1 (below) and tell me what to change before steps 2 and 3.
+
+## M8 step 1 (war-room UI), please look at it
+- `make dev`, then open http://localhost:5173. Click **Run DOMINO** (the default is "Scripted, free", $0), watch the timeline stream, then click **Approve plan**.
+- What's built: top bar (world, version, open incidents, **Inject disruption**, **Reset world**); KPI strip (exposed, projected late, revenue at risk, penalties, naive → true capacity per component, recovery spend); cascade sentence ("S-VOLT-AYU → 2 tier-1 → 2 components → 2 products → 3 plants → 38 orders / 16 customers", with "a tier-1-only view sees 0"); ELK-tiered canvas (tier 3 → customers) that colours and frames the cascade; the live agent timeline grouped by phase, with an approve/reject card; alert bar with scenario and model choice.
+- Checked in the browser at 1440 px: run → approval → execute → "All 9 invariants hold" → completed. Frontend builds and lints clean; the design detector reports nothing.
+- Not in step 1 (steps 2 and 3): hop-by-hop propagation animation, evidence-chip hover, Cypher drawer, tier-1 ↔ DOMINO toggle, plan comparison table, approval card with invariants preview, green execution edges, verification panel, Memory tab.
+- Design note: the impeccable skill wanted a design interview. You were asleep, so I inferred `PRODUCT.md` from PLAN §11; please correct it if it's off. A newer impeccable version (v4.6.0) is available via `npx impeccable update`; I didn't run it.

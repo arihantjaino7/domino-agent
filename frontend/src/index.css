@@ -1,29 +1,47 @@
-:root {
-  --bg: #ffffff;
-  --fg: #111827;
-  --muted: #f3f4f6;
-  font-family: system-ui, sans-serif;
-  color-scheme: light dark;
+@import 'tailwindcss';
+@import '@fontsource-variable/inter';
+@import '@fontsource/jetbrains-mono/400.css';
+@import '@fontsource/jetbrains-mono/500.css';
+
+/* DOMINO war room tokens. One accent (blue) for the agent and evidence; status colours are semantic only. */
+@theme {
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  --color-ink: oklch(0.155 0.012 255);        /* app background */
+  --color-panel: oklch(0.19 0.013 255);       /* side panel, bars */
+  --color-raised: oklch(0.225 0.014 255);     /* nodes, inputs */
+  --color-line: oklch(0.3 0.014 255);         /* borders */
+  --color-line-soft: oklch(0.255 0.013 255);
+  --color-fg: oklch(0.94 0.008 255);
+  --color-dim: oklch(0.74 0.012 255);         /* secondary text, >= 4.5:1 on ink */
+  --color-faint: oklch(0.6 0.012 255);        /* tertiary labels on panel */
+
+  --color-accent: oklch(0.68 0.15 255);       /* agent, evidence, primary action */
+  --color-accent-ink: oklch(0.2 0.05 255);
+
+  --color-disrupted: oklch(0.63 0.21 25);     /* red */
+  --color-covered: oklch(0.78 0.15 75);       /* amber: exposed but covered */
+  --color-late: oklch(0.7 0.17 10);           /* rose: projected late */
+  --color-protected: oklch(0.74 0.15 160);    /* green */
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0b0f17;
-    --fg: #e5e7eb;
-    --muted: #1f2937;
-  }
-}
+
+html, body, #root { height: 100%; }
 body {
   margin: 0;
-  background: var(--bg);
-  color: var(--fg);
+  background: var(--color-ink);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+  font-feature-settings: 'cv11', 'ss01';
+  -webkit-font-smoothing: antialiased;
 }
-.placeholder {
-  max-width: 40rem;
-  margin: 4rem auto;
-  padding: 0 1rem;
+.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+/* React Flow on the dark canvas */
+.react-flow__attribution { display: none; }
+.react-flow__controls { box-shadow: none; }
+.react-flow__controls-button {
+  background: var(--color-raised); border-bottom: 1px solid var(--color-line); fill: var(--color-dim);
 }
-.placeholder pre {
-  background: var(--muted);
-  padding: 1rem;
-  border-radius: 6px;
-}
+.react-flow__controls-button:hover { background: var(--color-line); }
+.react-flow__edge-path { transition: stroke 200ms ease-out, opacity 200ms ease-out; }

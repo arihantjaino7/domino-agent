@@ -32,6 +32,7 @@ SYSTEM_PROMPT = (Path(__file__).parent / "prompts" / "system.md").read_text(enco
 RUNS_DIR = REPO_ROOT / "backend" / "runs"
 MAX_TOKENS = 16_000
 MAX_SECONDS = 6 * 60
+MAX_ERROR_STREAK = 3
 # USD per million tokens, claude-opus-5-5 (claude-api skill, cached 2026-10-06).
 PRICES = {"input": 4.00, "output": 20.00, "cache_read": 0.20, "cache_write": 5.00}
 
@@ -49,6 +50,7 @@ class AgentRun:
                                                            "cache_write": 0, "requests": 0})
     tool_calls: int = 0
     nudged: bool = False
+    error_streak: int = 0
     error: str | None = None
     listeners: list[Callable[[dict[str, Any]], None]] = field(default_factory=list, repr=False)
 
@@ -184,6 +186,9 @@ async def run_phase(run: AgentRun, client: Any, mcp_client: Any) -> AgentRun:
             results.append({"type": "tool_result", "tool_use_id": call["id"], "content": text, "is_error": is_error})
             gated |= call["name"] in GATES and not is_error
         run.messages.append({"role": "user", "content": results})  # all results in ONE message
+        run.error_streak = 0 if not all(r["is_error"] for r in results) else run.error_streak + len(results)
+        if run.error_streak >= MAX_ERROR_STREAK:  # stop paying for a loop that keeps failing the same way
+            return _fail(run, f"{run.error_streak} tool errors in a row; last: {results[-1]['content'][:200]}")
         if gated:
             run.status = "awaiting_approval"
             plan = ctx.pending
