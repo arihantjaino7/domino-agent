@@ -31,8 +31,8 @@ cli: ## M3: make cli SCENARIO=monsoon (or panel_fire)
 demo-headless: ## M6: make demo-headless SCENARIO=monsoon [DRY_RUN=1 for the free scripted check]
 	cd backend && uv run python -m domino.agent.headless $(SCENARIO) $(if $(DRY_RUN),--dry-run,)
 
-eval: ## M10
-	$(error make eval is not built yet - milestone M10)
+eval: ## M10: offline evaluation on isolated graphs; no paid API
+	uv run --project backend python -m eval.run
 
 agent-workspace: ## create ../domino-agent so Claude Code can be the agent over MCP (free)
 	uv run --project backend python scripts/agent_workspace.py

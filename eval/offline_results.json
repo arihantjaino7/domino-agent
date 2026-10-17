@@ -1,0 +1,567 @@
+{
+  "checks": [
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 117,
+      "penalty_cents": 0,
+      "projected_late": 0,
+      "scenario": "healthy",
+      "seed": 42
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 117,
+      "penalty_cents": 53637000,
+      "projected_late": 13,
+      "scenario": "monsoon",
+      "seed": 42
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 117,
+      "penalty_cents": 13414000,
+      "projected_late": 8,
+      "scenario": "panel_fire",
+      "seed": 42
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 123,
+      "penalty_cents": 0,
+      "projected_late": 0,
+      "scenario": "healthy",
+      "seed": 43
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 123,
+      "penalty_cents": 45135000,
+      "projected_late": 10,
+      "scenario": "monsoon",
+      "seed": 43
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 123,
+      "penalty_cents": 28207000,
+      "projected_late": 6,
+      "scenario": "panel_fire",
+      "seed": 43
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 117,
+      "penalty_cents": 0,
+      "projected_late": 0,
+      "scenario": "healthy",
+      "seed": 44
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 117,
+      "penalty_cents": 6099000,
+      "projected_late": 12,
+      "scenario": "monsoon",
+      "seed": 44
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 117,
+      "penalty_cents": 12967000,
+      "projected_late": 6,
+      "scenario": "panel_fire",
+      "seed": 44
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 122,
+      "penalty_cents": 0,
+      "projected_late": 0,
+      "scenario": "healthy",
+      "seed": 45
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 122,
+      "penalty_cents": 34230000,
+      "projected_late": 13,
+      "scenario": "monsoon",
+      "seed": 45
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 122,
+      "penalty_cents": 23075000,
+      "projected_late": 8,
+      "scenario": "panel_fire",
+      "seed": 45
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 119,
+      "penalty_cents": 0,
+      "projected_late": 0,
+      "scenario": "healthy",
+      "seed": 46
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 119,
+      "penalty_cents": 56055000,
+      "projected_late": 12,
+      "scenario": "monsoon",
+      "seed": 46
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 119,
+      "penalty_cents": 20041000,
+      "projected_late": 7,
+      "scenario": "panel_fire",
+      "seed": 46
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 121,
+      "penalty_cents": 0,
+      "projected_late": 0,
+      "scenario": "healthy",
+      "seed": 47
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 121,
+      "penalty_cents": 49217000,
+      "projected_late": 11,
+      "scenario": "monsoon",
+      "seed": 47
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 121,
+      "penalty_cents": 43345000,
+      "projected_late": 5,
+      "scenario": "panel_fire",
+      "seed": 47
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 118,
+      "penalty_cents": 0,
+      "projected_late": 0,
+      "scenario": "healthy",
+      "seed": 48
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 118,
+      "penalty_cents": 31143000,
+      "projected_late": 13,
+      "scenario": "monsoon",
+      "seed": 48
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 118,
+      "penalty_cents": 11595000,
+      "projected_late": 6,
+      "scenario": "panel_fire",
+      "seed": 48
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 117,
+      "penalty_cents": 0,
+      "projected_late": 0,
+      "scenario": "healthy",
+      "seed": 49
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 117,
+      "penalty_cents": 70421000,
+      "projected_late": 11,
+      "scenario": "monsoon",
+      "seed": 49
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 117,
+      "penalty_cents": 33436000,
+      "projected_late": 6,
+      "scenario": "panel_fire",
+      "seed": 49
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 119,
+      "penalty_cents": 0,
+      "projected_late": 0,
+      "scenario": "healthy",
+      "seed": 50
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 119,
+      "penalty_cents": 46062000,
+      "projected_late": 14,
+      "scenario": "monsoon",
+      "seed": 50
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 119,
+      "penalty_cents": 23922000,
+      "projected_late": 7,
+      "scenario": "panel_fire",
+      "seed": 50
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 124,
+      "penalty_cents": 0,
+      "projected_late": 0,
+      "scenario": "healthy",
+      "seed": 51
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 124,
+      "penalty_cents": 63777000,
+      "projected_late": 12,
+      "scenario": "monsoon",
+      "seed": 51
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 124,
+      "penalty_cents": 39418000,
+      "projected_late": 6,
+      "scenario": "panel_fire",
+      "seed": 51
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 117,
+      "penalty_cents": 0,
+      "projected_late": 0,
+      "scenario": "healthy",
+      "seed": 52
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 117,
+      "penalty_cents": 72149000,
+      "projected_late": 15,
+      "scenario": "monsoon",
+      "seed": 52
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 117,
+      "penalty_cents": 49176000,
+      "projected_late": 8,
+      "scenario": "panel_fire",
+      "seed": 52
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 120,
+      "penalty_cents": 0,
+      "projected_late": 0,
+      "scenario": "healthy",
+      "seed": 53
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 120,
+      "penalty_cents": 39241000,
+      "projected_late": 13,
+      "scenario": "monsoon",
+      "seed": 53
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 120,
+      "penalty_cents": 30729000,
+      "projected_late": 6,
+      "scenario": "panel_fire",
+      "seed": 53
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 119,
+      "penalty_cents": 0,
+      "projected_late": 0,
+      "scenario": "healthy",
+      "seed": 54
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 119,
+      "penalty_cents": 53451000,
+      "projected_late": 14,
+      "scenario": "monsoon",
+      "seed": 54
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 119,
+      "penalty_cents": 15804000,
+      "projected_late": 8,
+      "scenario": "panel_fire",
+      "seed": 54
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 119,
+      "penalty_cents": 0,
+      "projected_late": 0,
+      "scenario": "healthy",
+      "seed": 55
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 119,
+      "penalty_cents": 51417000,
+      "projected_late": 14,
+      "scenario": "monsoon",
+      "seed": 55
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 119,
+      "penalty_cents": 17098000,
+      "projected_late": 6,
+      "scenario": "panel_fire",
+      "seed": 55
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 118,
+      "penalty_cents": 0,
+      "projected_late": 0,
+      "scenario": "healthy",
+      "seed": 56
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 118,
+      "penalty_cents": 15685000,
+      "projected_late": 13,
+      "scenario": "monsoon",
+      "seed": 56
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 118,
+      "penalty_cents": 8380000,
+      "projected_late": 8,
+      "scenario": "panel_fire",
+      "seed": 56
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 119,
+      "penalty_cents": 0,
+      "projected_late": 0,
+      "scenario": "healthy",
+      "seed": 57
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 119,
+      "penalty_cents": 58014000,
+      "projected_late": 13,
+      "scenario": "monsoon",
+      "seed": 57
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 119,
+      "penalty_cents": 37992000,
+      "projected_late": 7,
+      "scenario": "panel_fire",
+      "seed": 57
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 116,
+      "penalty_cents": 0,
+      "projected_late": 0,
+      "scenario": "healthy",
+      "seed": 58
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 116,
+      "penalty_cents": 13920000,
+      "projected_late": 8,
+      "scenario": "monsoon",
+      "seed": 58
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 116,
+      "penalty_cents": 8259000,
+      "projected_late": 6,
+      "scenario": "panel_fire",
+      "seed": 58
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 117,
+      "penalty_cents": 0,
+      "projected_late": 0,
+      "scenario": "healthy",
+      "seed": 59
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 117,
+      "penalty_cents": 25189000,
+      "projected_late": 12,
+      "scenario": "monsoon",
+      "seed": 59
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 117,
+      "penalty_cents": 8655000,
+      "projected_late": 7,
+      "scenario": "panel_fire",
+      "seed": 59
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 121,
+      "penalty_cents": 0,
+      "projected_late": 0,
+      "scenario": "healthy",
+      "seed": 60
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 121,
+      "penalty_cents": 73282000,
+      "projected_late": 13,
+      "scenario": "monsoon",
+      "seed": 60
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 121,
+      "penalty_cents": 42617000,
+      "projected_late": 7,
+      "scenario": "panel_fire",
+      "seed": 60
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 120,
+      "penalty_cents": 0,
+      "projected_late": 0,
+      "scenario": "healthy",
+      "seed": 61
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 120,
+      "penalty_cents": 49278000,
+      "projected_late": 12,
+      "scenario": "monsoon",
+      "seed": 61
+    },
+    {
+      "differences": [],
+      "ok": true,
+      "orders": 120,
+      "penalty_cents": 24583000,
+      "projected_late": 7,
+      "scenario": "panel_fire",
+      "seed": 61
+    }
+  ],
+  "scope": "pure shortage projection only; no database or recovery scores",
+  "seeds": [
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49,
+    50,
+    51,
+    52,
+    53,
+    54,
+    55,
+    56,
+    57,
+    58,
+    59,
+    60,
+    61
+  ]
+}

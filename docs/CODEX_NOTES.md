@@ -18,18 +18,18 @@ All 12 occurrences are in `README.md`, section **9. Evaluation results**. Replac
 
 | File and line | Section / item | Placeholder |
 |---|---|---|
-| `README.md:140` | 9. Evaluation results / B0: do nothing / Projected-late orders | `TODO(numbers)` |
-| `README.md:140` | 9. Evaluation results / B0: do nothing / Spend | `TODO(numbers)` |
-| `README.md:140` | 9. Evaluation results / B0: do nothing / Runtime | `TODO(numbers)` |
-| `README.md:141` | 9. Evaluation results / B1: tier-1 greedy / Projected-late orders | `TODO(numbers)` |
-| `README.md:141` | 9. Evaluation results / B1: tier-1 greedy / Spend | `TODO(numbers)` |
-| `README.md:141` | 9. Evaluation results / B1: tier-1 greedy / Runtime | `TODO(numbers)` |
-| `README.md:142` | 9. Evaluation results / B2: graph-aware greedy / Projected-late orders | `TODO(numbers)` |
-| `README.md:142` | 9. Evaluation results / B2: graph-aware greedy / Spend | `TODO(numbers)` |
-| `README.md:142` | 9. Evaluation results / B2: graph-aware greedy / Runtime | `TODO(numbers)` |
-| `README.md:144` | 9. Evaluation results / Test count | `TODO(numbers)` |
-| `README.md:144` | 9. Evaluation results / Query latency table | `TODO(numbers)` |
-| `README.md:144` | 9. Evaluation results / Evidence validity and verification results | `TODO(numbers)` |
+| `README.md:142` | 9. Evaluation results / B0: do nothing / Projected-late orders | `TODO(numbers)` |
+| `README.md:142` | 9. Evaluation results / B0: do nothing / Spend | `TODO(numbers)` |
+| `README.md:142` | 9. Evaluation results / B0: do nothing / Runtime | `TODO(numbers)` |
+| `README.md:143` | 9. Evaluation results / B1: tier-1 greedy / Projected-late orders | `TODO(numbers)` |
+| `README.md:143` | 9. Evaluation results / B1: tier-1 greedy / Spend | `TODO(numbers)` |
+| `README.md:143` | 9. Evaluation results / B1: tier-1 greedy / Runtime | `TODO(numbers)` |
+| `README.md:144` | 9. Evaluation results / B2: graph-aware greedy / Projected-late orders | `TODO(numbers)` |
+| `README.md:144` | 9. Evaluation results / B2: graph-aware greedy / Spend | `TODO(numbers)` |
+| `README.md:144` | 9. Evaluation results / B2: graph-aware greedy / Runtime | `TODO(numbers)` |
+| `README.md:146` | 9. Evaluation results / Test count | `TODO(numbers)` |
+| `README.md:146` | 9. Evaluation results / Query latency table | `TODO(numbers)` |
+| `README.md:146` | 9. Evaluation results / Evidence validity and verification results | `TODO(numbers)` |
 
 Other submission placeholders are in README section 1: `TODO(gif)`, `TODO(video)` and `TODO(url)`. The evaluation table is explicitly unmeasured. No result numbers were invented.
 
@@ -57,3 +57,32 @@ Other submission placeholders are in README section 1: `TODO(gif)`, `TODO(video)
 - **Disclosure review wording:** the required supplied line says Claude Code and the author reviewed the work. An additional appended status line explicitly says that review is pending, so the supplied text does not stand as an unqualified claim. Confirm review before submission.
 
 No paid API was called. `.env` was not read or changed. No deployment, push or backend test suite run was performed for these documentation and frontend-only tasks.
+
+## Evaluation follow-up (M10 partial)
+
+The user explicitly reassigned evaluation to Codex while keeping deployment with Claude. This authorizes the evaluation files beyond the earlier docs-only ownership list. No deployment implementation, engine or frontend behavior was changed.
+
+Implemented for review:
+
+- `eval/oracle.py`: independent raw-JSON exposure, shortage ledger, NetworkX max-flow, PO rationing and evidence checks; no production-engine imports.
+- `scripts/export_world_json.py` and read-only `queries/eval/`: reproducible JSON/gzip snapshots with hashes. Query catalogue regenerated (now 96 files).
+- `eval/run.py`: fixed seeds 42–61, both incident motifs, B0/B1/B2/S4, four hand-worked fixtures, two free scripted MCP repeats per scenario, isolated graphs, strict coverage, failure artifacts, query samples and provenance. The complete database matrix is not yet integration-validated.
+- `eval/report.py`: deterministic Markdown from raw metrics, paired comparisons, verifier/trap diagnostics, nearest-rank query p50/p95 and explicit unmeasured real-model claims.
+- `eval/offline.py` and `read_only.py`: narrower validations that can be reported honestly while database scoring is blocked.
+- `make eval` now runs the harness. NetworkX 3.7 is pinned in dev dependencies only.
+
+Completed checks:
+
+- **46 tests passed**: eval oracle/harness tests, seed tests, five pure shortage tests and four pure allocator tests. Command: `uv run --project backend pytest eval backend/tests/test_seed_world.py` plus the named pure tests in `test_m3_engines.py` / `test_m5_execution.py`; see test collection or the current chat for exact selectors.
+- **60/60** fixed-seed database-free projection checks pass, recorded in `eval/OFFLINE_CHECKS.md` and `offline_results.json`. These do not test graph extraction or recovery execution.
+- **4/4** existing graph snapshot conformance checks passed before the Docker restart, recorded in `eval/READ_ONLY_CHECKS.md` and `read_only_results.json`. All recorded queries were read-only and before/after exports matched. Their scoped query timings are published separately.
+- All **12 backup files** (JSON/gzip and Redis DUMP for six graphs) were read back and their SHA-256 hashes/counts verified. `eval/out/db-backup/manifest.json` records indexes, constraints, TTLs and file paths. This ignored private folder was not committed. Restore has not been tested.
+
+Blocker and recovery status:
+
+- Actual sandbox evaluation hit GRAPH.COPY fork errors, then Redis MISCONF after snapshot failure. Docker logs, image reads and container exec returned I/O errors.
+- After explicit user approval and verified graph backups, normal Docker restart timed out. Targeted Docker-process/docker-desktop-instance restart then failed on WSL data-disk `/dev/sde` with no-such-device errors. The failed startup was stopped to avoid further automatic provisioning attempts. Other WSL distributions were not terminated. No factory reset, unregister, prune, volume deletion or filesystem-repair command was issued.
+- **Docker/FalkorDB is currently unavailable.** `eval/ENVIRONMENT.md` records the incident and backup inventory. The main `eval/RESULTS.md` is intentionally incomplete/failing. No recovery numbers were filled in the README.
+- After safe storage recovery and graph-state verification, run `uv run --project backend pytest backend/tests eval -q`, then `uv run --project backend python -m eval.run`. Main evaluation needs all 176 method rows and six scripted runs; real-model A and CP-SAT D remain unmeasured.
+
+Nothing was pushed. No paid model API was called. The complete backend suite could not run while the database was unavailable. Deployment remains with Claude. The final evaluation implementation/blocked-run commit is discoverable with `git log -1 --oneline` after this handoff is committed.

@@ -1,0 +1,421 @@
+{
+  "checks": [
+    {
+      "evidence": [],
+      "graph": "world:pristine",
+      "ok": true,
+      "oracle_differences": [],
+      "query_samples_ms": [
+        {
+          "ms": 24.33,
+          "name": "eval/nodes",
+          "ro": true
+        },
+        {
+          "ms": 33.4,
+          "name": "eval/edges",
+          "ro": true
+        },
+        {
+          "ms": 5.8,
+          "name": "shortage/supply_edges",
+          "ro": true
+        },
+        {
+          "ms": 4.78,
+          "name": "shortage/upstream_feeds",
+          "ro": true
+        },
+        {
+          "ms": 6.09,
+          "name": "shortage/sites",
+          "ro": true
+        },
+        {
+          "ms": 3.14,
+          "name": "upstream/purchase_orders",
+          "ro": true
+        },
+        {
+          "ms": 4.48,
+          "name": "shortage/stock",
+          "ro": true
+        },
+        {
+          "ms": 23.67,
+          "name": "shortage/orders",
+          "ro": true
+        },
+        {
+          "ms": 22.31,
+          "name": "eval/nodes",
+          "ro": true
+        },
+        {
+          "ms": 35.38,
+          "name": "eval/edges",
+          "ro": true
+        }
+      ],
+      "totals": {
+        "exposed": 0,
+        "exposed_covered": 0,
+        "late_beyond_horizon": 0,
+        "orders": 117,
+        "penalty_exposure_cents": 0,
+        "projected_late": 0,
+        "revenue_at_risk_cents": 0
+      },
+      "unchanged": true
+    },
+    {
+      "evidence": [
+        {
+          "agreement": {
+            "false_negative_ids": [],
+            "false_positive_ids": [],
+            "fn": 0,
+            "fp": 0,
+            "tp": 38
+          },
+          "incident": "INC-0001",
+          "paths": {
+            "invalid": [],
+            "total": 3,
+            "valid": 3
+          }
+        }
+      ],
+      "graph": "world:live",
+      "ok": true,
+      "oracle_differences": [],
+      "query_samples_ms": [
+        {
+          "ms": 25.64,
+          "name": "eval/nodes",
+          "ro": true
+        },
+        {
+          "ms": 36.14,
+          "name": "eval/edges",
+          "ro": true
+        },
+        {
+          "ms": 3.68,
+          "name": "shortage/supply_edges",
+          "ro": true
+        },
+        {
+          "ms": 4.02,
+          "name": "shortage/upstream_feeds",
+          "ro": true
+        },
+        {
+          "ms": 3.84,
+          "name": "shortage/sites",
+          "ro": true
+        },
+        {
+          "ms": 2.34,
+          "name": "upstream/purchase_orders",
+          "ro": true
+        },
+        {
+          "ms": 2.48,
+          "name": "shortage/stock",
+          "ro": true
+        },
+        {
+          "ms": 23.55,
+          "name": "shortage/orders",
+          "ro": true
+        },
+        {
+          "ms": 4.26,
+          "name": "exposure/tier1_view",
+          "ro": true
+        },
+        {
+          "ms": 14.81,
+          "name": "exposure/exposure",
+          "ro": true
+        },
+        {
+          "ms": 3.87,
+          "name": "exposure/shared_upstream",
+          "ro": true
+        },
+        {
+          "ms": 25.71,
+          "name": "eval/nodes",
+          "ro": true
+        },
+        {
+          "ms": 42.55,
+          "name": "eval/edges",
+          "ro": true
+        }
+      ],
+      "totals": {
+        "exposed": 38,
+        "exposed_covered": 25,
+        "late_beyond_horizon": 6,
+        "orders": 117,
+        "penalty_exposure_cents": 53637000,
+        "projected_late": 13,
+        "revenue_at_risk_cents": 425191100
+      },
+      "unchanged": true
+    },
+    {
+      "evidence": [
+        {
+          "agreement": {
+            "false_negative_ids": [],
+            "false_positive_ids": [],
+            "fn": 0,
+            "fp": 0,
+            "tp": 26
+          },
+          "incident": "INC-0001",
+          "paths": {
+            "invalid": [],
+            "total": 3,
+            "valid": 3
+          }
+        }
+      ],
+      "graph": "world:cli:monsoon",
+      "ok": true,
+      "oracle_differences": [],
+      "query_samples_ms": [
+        {
+          "ms": 25.9,
+          "name": "eval/nodes",
+          "ro": true
+        },
+        {
+          "ms": 75.06,
+          "name": "eval/edges",
+          "ro": true
+        },
+        {
+          "ms": 2.85,
+          "name": "shortage/supply_edges",
+          "ro": true
+        },
+        {
+          "ms": 3.67,
+          "name": "shortage/upstream_feeds",
+          "ro": true
+        },
+        {
+          "ms": 4.19,
+          "name": "shortage/sites",
+          "ro": true
+        },
+        {
+          "ms": 3.64,
+          "name": "upstream/purchase_orders",
+          "ro": true
+        },
+        {
+          "ms": 2.09,
+          "name": "upstream/site_feeders",
+          "ro": true
+        },
+        {
+          "ms": 2.54,
+          "name": "upstream/feeder_load",
+          "ro": true
+        },
+        {
+          "ms": 2.15,
+          "name": "upstream/sites",
+          "ro": true
+        },
+        {
+          "ms": 2.38,
+          "name": "upstream/bom_inputs",
+          "ro": true
+        },
+        {
+          "ms": 2.18,
+          "name": "upstream/protects",
+          "ro": true
+        },
+        {
+          "ms": 1.98,
+          "name": "shortage/stock",
+          "ro": true
+        },
+        {
+          "ms": 20.42,
+          "name": "shortage/orders",
+          "ro": true
+        },
+        {
+          "ms": 3.72,
+          "name": "exposure/tier1_view",
+          "ro": true
+        },
+        {
+          "ms": 17.78,
+          "name": "exposure/exposure",
+          "ro": true
+        },
+        {
+          "ms": 5.26,
+          "name": "exposure/shared_upstream",
+          "ro": true
+        },
+        {
+          "ms": 25.56,
+          "name": "eval/nodes",
+          "ro": true
+        },
+        {
+          "ms": 36.79,
+          "name": "eval/edges",
+          "ro": true
+        }
+      ],
+      "totals": {
+        "exposed": 38,
+        "exposed_covered": 37,
+        "late_beyond_horizon": 0,
+        "orders": 117,
+        "penalty_exposure_cents": 10500000,
+        "projected_late": 1,
+        "revenue_at_risk_cents": 42178900
+      },
+      "unchanged": true
+    },
+    {
+      "evidence": [
+        {
+          "agreement": {
+            "false_negative_ids": [],
+            "false_positive_ids": [],
+            "fn": 0,
+            "fp": 0,
+            "tp": 4
+          },
+          "incident": "INC-0002",
+          "paths": {
+            "invalid": [],
+            "total": 1,
+            "valid": 1
+          }
+        }
+      ],
+      "graph": "world:cli:panel_fire",
+      "ok": true,
+      "oracle_differences": [],
+      "query_samples_ms": [
+        {
+          "ms": 23.91,
+          "name": "eval/nodes",
+          "ro": true
+        },
+        {
+          "ms": 35.68,
+          "name": "eval/edges",
+          "ro": true
+        },
+        {
+          "ms": 2.66,
+          "name": "shortage/supply_edges",
+          "ro": true
+        },
+        {
+          "ms": 4.92,
+          "name": "shortage/upstream_feeds",
+          "ro": true
+        },
+        {
+          "ms": 4.06,
+          "name": "shortage/sites",
+          "ro": true
+        },
+        {
+          "ms": 3.46,
+          "name": "upstream/purchase_orders",
+          "ro": true
+        },
+        {
+          "ms": 1.89,
+          "name": "upstream/site_feeders",
+          "ro": true
+        },
+        {
+          "ms": 1.96,
+          "name": "upstream/feeder_load",
+          "ro": true
+        },
+        {
+          "ms": 2.53,
+          "name": "upstream/sites",
+          "ro": true
+        },
+        {
+          "ms": 2.94,
+          "name": "upstream/bom_inputs",
+          "ro": true
+        },
+        {
+          "ms": 2.25,
+          "name": "upstream/protects",
+          "ro": true
+        },
+        {
+          "ms": 2.35,
+          "name": "shortage/stock",
+          "ro": true
+        },
+        {
+          "ms": 19.26,
+          "name": "shortage/orders",
+          "ro": true
+        },
+        {
+          "ms": 4.03,
+          "name": "exposure/tier1_view",
+          "ro": true
+        },
+        {
+          "ms": 12.59,
+          "name": "exposure/exposure",
+          "ro": true
+        },
+        {
+          "ms": 4.1,
+          "name": "exposure/shared_upstream",
+          "ro": true
+        },
+        {
+          "ms": 22.43,
+          "name": "eval/nodes",
+          "ro": true
+        },
+        {
+          "ms": 37.15,
+          "name": "eval/edges",
+          "ro": true
+        }
+      ],
+      "totals": {
+        "exposed": 12,
+        "exposed_covered": 12,
+        "late_beyond_horizon": 0,
+        "orders": 117,
+        "penalty_exposure_cents": 0,
+        "projected_late": 0,
+        "revenue_at_risk_cents": 0
+      },
+      "unchanged": true
+    }
+  ],
+  "generated_utc": "2026-10-17T11:17:21.170710+00:00",
+  "scope": "read-only checks of existing demo snapshots; not generated recovery trials"
+}

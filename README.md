@@ -135,6 +135,8 @@ See the verifier names and approval path in [ARCHITECTURE.md](docs/ARCHITECTURE.
 
 These entries are placeholders for engine-generated evaluation output. They are not measured results.
 
+The [evaluation harness report](eval/RESULTS.md) records the current database blocker. [Database-free projection checks](eval/OFFLINE_CHECKS.md) and [read-only snapshot checks](eval/READ_ONLY_CHECKS.md) have separate, narrower scopes. Full recovery scoring remains incomplete; see the [environment incident and backups](eval/ENVIRONMENT.md).
+
 | Method | Projected-late orders | Spend | Runtime |
 |---|---|---|---|
 | B0: do nothing | TODO(numbers) | TODO(numbers) | TODO(numbers) |
