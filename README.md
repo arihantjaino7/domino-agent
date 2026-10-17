@@ -160,7 +160,7 @@ What the numbers say:
 
 **Scripted agent runs (free, plumbing only).** Monsoon, Panel Fire and the Antwerp non-event, 2 runs each: 6/6 pass. Disruptions paused for approval, placed no PO before approval and passed verification afterwards; the non-event answered `not_in_graph` and left the world unchanged. This proves the tool path, not the intelligence of a real model; real-model runs are not part of this evaluation.
 
-**Tests:** 102 backend tests (`make test`) and 24 evaluation tests (`uv run --project backend pytest eval`), all passing.
+**Tests:** 103 backend tests (`make test`) and 24 evaluation tests (`uv run --project backend pytest eval`), all passing.
 
 **Query latency** (local FalkorDB, `run_query` log, during evaluation; p50 / p95 in ms): multi-tier exposure `exposure/exposure` 18.97 / 22.95; tier-1 view `exposure/tier1_view` 3.95 / 5.29; max-flow `flow/maxflow` 5.80 / 12.45 (2,294 calls); order projection `shortage/orders` 32.71 / 46.26; execution preflight 5.21 / 6.60 and atomic write 6.26 / 7.62. These are local measurements, not deployment latency. The full table is in [RESULTS.md](eval/RESULTS.md#named-query-performance).
 
