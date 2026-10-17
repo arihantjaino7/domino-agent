@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import difflib
 import re
-from typing import Any
+from typing import Any, Callable
 
 from domino.agent import memory
 from domino.agent.context import ANY_ID, GUARDED_ID, RunContext
@@ -509,22 +509,70 @@ def _ref_values(ctx: RunContext, refs: list[str]) -> list[float]:
     return out
 
 
-def _unsupported_numbers(text: str, values: list[float]) -> list[str]:
-    """Stated numbers in `text` that no cited value supports, allowing for the rounding the text shows
+def _supports(tok: str) -> Callable[[float], bool]:
+    """Which values support a stated number, allowing for the rounding the text shows
     ("$289K" matches 288,500 to 289,499; "99.1%" matches 99.1 or 0.991)."""
-    bad = []
-    for tok in _STATED_NUMBER.findall(_NAME_WITH_DIGITS.sub(" ", text)):
-        t = tok.replace(" ", "")
-        suffix = t[-1] if t[-1] in "KkMm%" else ""
-        digits = t[:-1] if suffix else t
-        x = float(digits.replace(",", ""))
-        decimals = len(digits.split(".")[1]) if "." in digits else 0
-        scale = {"k": 1e3, "m": 1e6}.get(suffix.lower(), 1.0)
-        tol = 0.5 * 10 ** -decimals * scale + 1e-9
-        targets = [x * scale] + ([x / 100] if suffix == "%" else [])
-        if not any(abs(tgt - v) <= (tol if tgt == x * scale else tol / 100) for tgt in targets for v in values):
-            bad.append(tok.strip())
-    return bad
+    t = tok.replace(" ", "")
+    suffix = t[-1] if t[-1] in "KkMm%" else ""
+    digits = t[:-1] if suffix else t
+    x = float(digits.replace(",", ""))
+    decimals = len(digits.split(".")[1]) if "." in digits else 0
+    scale = {"k": 1e3, "m": 1e6}.get(suffix.lower(), 1.0)
+    tol = 0.5 * 10 ** -decimals * scale + 1e-9
+    targets = [(x * scale, tol)] + ([(x / 100, tol / 100)] if suffix == "%" else [])
+    return lambda v: any(abs(tgt - v) <= t_ for tgt, t_ in targets)
+
+
+def _stated_numbers(text: str) -> list[str]:
+    return [tok.strip() for tok in _STATED_NUMBER.findall(_NAME_WITH_DIGITS.sub(" ", text))]
+
+
+def _unsupported_numbers(text: str, values: list[float]) -> list[str]:
+    """Stated numbers in `text` that no cited value supports."""
+    return [tok for tok in _stated_numbers(text) if not any(map(_supports(tok), values))]
+
+
+def _item_label(items: list[Any], i: int) -> str:
+    """How a ref names items[i]: by an id field when that id is unique in the list (strategies.S4), else by index."""
+    item = items[i]
+    if isinstance(item, dict):
+        for field in _ITEM_KEYS:
+            v = item.get(field)
+            if v is not None and "." not in str(v) and \
+                    sum(isinstance(it, dict) and str(it.get(field)) == str(v) for it in items) == 1:
+                return str(v)
+    return str(i)
+
+
+def _where(ctx: RunContext, tok: str, limit: int = 3) -> list[str]:
+    """Refs in this run's results whose value supports the stated number, shortest first, so a number-guard
+    error can say which ref to cite instead of leaving the agent to drop the number."""
+    ok, hits = _supports(tok), []
+
+    def walk(node: Any, path: str, key: str, depth: int) -> None:
+        if len(hits) >= 200 or depth > 8 or isinstance(node, bool) or node is None:
+            return
+        if isinstance(node, (int, float)):
+            if ok(float(node)) or (key.endswith("cents") and ok(node / 100)):
+                hits.append(path)
+        elif isinstance(node, dict):
+            for k, v in node.items():
+                if k != "result_ref":
+                    walk(v, f"{path}.{k}", str(k), depth + 1)
+        elif isinstance(node, list):
+            for i, v in enumerate(node):
+                walk(v, f"{path}.{_item_label(node, i)}", key, depth + 1)
+
+    for ref, res in ctx.results.items():
+        walk(res, ref, "", 0)
+    return sorted(hits, key=lambda p: (p.count("."), len(p), p))[:limit]
+
+
+def _number_error(ctx: RunContext, where: str, num: str, cited: str) -> str:
+    found = _where(ctx, num)
+    hint = (f"; it appears at {', '.join(found)}: add the right one to a claim's metric_refs" if found
+            else "; no tool result in this run has that value")
+    return f"{where} states {num}, which {cited} (number guard){hint}"
 
 
 def submit_incident_report(ctx: RunContext, headline: str, outcome: str, claims: list[dict[str, Any]],
@@ -558,13 +606,13 @@ def submit_incident_report(ctx: RunContext, headline: str, outcome: str, claims:
         values = _ref_values(ctx, c.get("metric_refs", []))
         all_values += values
         for num in _unsupported_numbers(c.get("text", ""), values):
-            errors.append(f"claim {i}: text states {num}, which is not a value at its metric_refs "
-                          f"{c.get('metric_refs', [])} (number guard)")
+            errors.append(_number_error(ctx, f"claim {i}: text", num,
+                                        f"is not a value at its metric_refs {c.get('metric_refs', [])}"))
     for found in GUARDED_ID.findall(headline):
         if found not in ctx.seen_ids:
             errors.append(f"headline mentions {found}, which no tool returned (entity guard)")
     for num in _unsupported_numbers(headline, all_values):
-        errors.append(f"headline states {num}, which no claim's metric_refs support (number guard)")
+        errors.append(_number_error(ctx, "headline", num, "no claim's metric_refs support"))
     if decision_id and (not ctx.pending or ctx.pending["decision_id"] != decision_id):
         errors.append(f"decision_id {decision_id} is not this run's decision")
     if errors:

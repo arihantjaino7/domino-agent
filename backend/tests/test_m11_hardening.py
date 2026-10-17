@@ -194,3 +194,28 @@ def test_http_reject_checks_the_decision_and_records_it(monkeypatch):
         assert second["status"] == "awaiting_approval" and second["pending_decision"] != first
         row = _status(first)
         assert row["status"] == "rejected" and row["feedback"] == "use max service"
+
+def test_a_number_guard_error_says_where_the_value_is(ctx):
+    sim = T.simulate_strategies(ctx)
+    s4 = next(s for s in sim["strategies"] if s["strategy_id"] == "S4")
+    claim = {"type": "protected", "text": "Plan S4 was compared in the sandbox.", "entities": [], "evidence_ids": [],
+             "metric_refs": [f"{sim['result_ref']}.strategies.S4.spend_usd"]}
+    headline = f"S4 protects {s4['protected_projected']} orders (projected)."
+    with pytest.raises(T.ToolInputError) as err:
+        T.submit_incident_report(ctx, headline, "answered_with_path", [claim])
+    msg = str(err.value)
+    hint = f"{sim['result_ref']}.strategies.S4.protected_projected"
+    assert "headline states 12" in msg and hint in msg
+
+    # Following the hint makes the same headline pass.
+    T.submit_incident_report(ctx, headline, "answered_with_path", [{**claim, "metric_refs": claim["metric_refs"] + [hint]}])
+    assert ctx.report["headline"] == headline
+
+
+def test_a_number_no_tool_returned_is_called_out():
+    c = new_context("t-m11-nowhere", WORLD)
+    c.add_result("x", {"totals": {"late": 3}}, {})
+    with pytest.raises(T.ToolInputError, match="no tool result in this run has that value"):
+        T.submit_incident_report(c, "h", "answered_with_path", [{"type": "late", "text": "987 orders are late.",
+                                                                 "entities": [], "evidence_ids": [],
+                                                                 "metric_refs": ["R-01.totals.late"]}])
