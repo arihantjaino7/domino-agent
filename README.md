@@ -18,7 +18,7 @@ This is a synthetic world for Kestrel Devices. The seed generator and checked-in
 
 ## 3. What DOMINO does (6 phases)
 
-1. Detect and trace: match an alert to known places, record the incident and follow upstream dependencies.
+1. Detect and trace: match an alert to known places, record the incident, follow upstream dependencies and recall dated lessons about the same sites from earlier runs.
 2. Measure impact and options: project shortages, compute clean capacity and check alternate suppliers.
 3. Simulate: fork the live graph and score recovery strategies with the same engines.
 4. Approve: show the proposed plan and wait for a human decision.
@@ -125,6 +125,7 @@ The server is mounted at `/mcp`. It exposes these names from `backend/domino/mcp
 - The LLM never writes Cypher. Tools call fixed, parameterised queries through deterministic engines.
 - Approval is bound to `plan_hash` and `world_version`. A changed world requires simulation again.
 - Execution runs preflight, writes atomically and compares its receipt with the plan. A unique PO-ID constraint guards against duplicates.
+- The final report is checked: every entity id, evidence id, result reference and stated number must come from this run's tool results, or the report is rejected.
 - Verification checks approved spare, BOM compatibility, clean capacity, arrival deadlines, budget, PO uniqueness, complete order coverage, joint material balance and receipt counts.
 - Orders covered by POs are **protected (projected)**. Parts have not yet arrived.
 - **Not in the graph** does not mean **safe**.
@@ -133,19 +134,33 @@ See the verifier names and approval path in [ARCHITECTURE.md](docs/ARCHITECTURE.
 
 ## 9. Evaluation results
 
-These entries are placeholders for engine-generated evaluation output. They are not measured results.
+All numbers below come from one run of `make eval` (0 failures) and from the test suites; the full generated report, with every query timing and the raw rows, is [eval/RESULTS.md](eval/RESULTS.md) and [eval/results.json](eval/results.json).
 
-The [evaluation harness report](eval/RESULTS.md) records the current database blocker. [Database-free projection checks](eval/OFFLINE_CHECKS.md) and [read-only snapshot checks](eval/READ_ONLY_CHECKS.md) have separate, narrower scopes. Full recovery scoring remains incomplete; see the [environment incident and backups](eval/ENVIRONMENT.md).
+**Setup.** 20 generated worlds (seeds 42–61), each hit by two disruptions (the Monsoon flood and the Panel Fire): 40 cases and 4,766 orders in total. Every method runs on its own copy of the graph and is scored by the same projection. No LLM is called.
 
-| Method | Projected-late orders | Spend | Runtime |
-|---|---|---|---|
-| B0: do nothing | TODO(numbers) | TODO(numbers) | TODO(numbers) |
-| B1: tier-1 greedy | TODO(numbers) | TODO(numbers) | TODO(numbers) |
-| B2: graph-aware greedy | TODO(numbers) | TODO(numbers) | TODO(numbers) |
+| Method | Projected-late orders (of 4,766) | Spend | Runtime per case, p50 |
+|---|---:|---:|---:|
+| B0: do nothing | 383 | $0 | 77 ms (projection only) |
+| B1: tier-1 view (same greedy allocator, nominal tier-1 capacity) | 130 | $5,027,357 | 236 ms |
+| B2: graph-aware greedy (clean capacity and shared-upstream checks) | 71 | $4,904,084 | 240 ms |
+| S4: DOMINO balanced (graph-aware, reliability-weighted, air when needed) | 57 | $5,112,242 | 245 ms |
 
-Test count: TODO(numbers). Query latency table: TODO(numbers). Evidence validity and verification results: TODO(numbers).
+What the numbers say:
+- **The tier-1 view's plans break.** B1 picked a source with zero clean capacity in 20 of 40 cases, failed 40 verifier checks, and 88 of the orders it marked "protected" are still late. B2 and S4: 0 traps, 0 failed checks.
+- **B2 beats B1 using the same allocator and the same budget:** fewer late orders in 19 of 40 cases, a tie in 21, worse in 0 (59 fewer late orders in total).
+- **The gain only appears when an alternative shares an upstream site.** In the Monsoon cases late orders go 248 → 130 (B1) → 71 (B2) → 57 (S4). In the Panel Fire cases the backup supplier is clean, so B1, B2 and S4 all choose it and all reach 0 late orders (B0: 135).
+- **Demo world (seed 42), Monsoon:** 13 late orders with no action; S4 leaves 1 late for $142,475 (116 of 117 on time); B1 leaves 7 late and fails verifier checks V3 and V8.
+- S4's extra gain over B2 is not only graph visibility: it also ranks by reliability and allows air freight.
 
-The current allocator is greedy. No optimality claim is made. The evaluation harness and submission metrics are still pending review; this skeleton does not treat planning targets as results.
+**Independent oracle.** `eval/oracle.py` imports no DOMINO code. It reads a raw export of the graph and recomputes everything with NetworkX and exact fractions. It agrees on exposed orders (998/998, no false positives or negatives), projected-late orders (386/386), max-flow capacities (85/85 component/plant checks) and evidence paths (85/85 structurally valid). Projection mismatches: 0 of 176 method runs. All 20 undisturbed worlds have 0 projected-late orders.
+
+**Scripted agent runs (free, plumbing only).** Monsoon, Panel Fire and the Antwerp non-event, 2 runs each: 6/6 pass. Disruptions paused for approval, placed no PO before approval and passed verification afterwards; the non-event answered `not_in_graph` and left the world unchanged. This proves the tool path, not the intelligence of a real model; real-model runs are not part of this evaluation.
+
+**Tests:** 87 backend tests (`make test`) and 24 evaluation tests (`uv run --project backend pytest eval`), all passing.
+
+**Query latency** (local FalkorDB, `run_query` log, during evaluation; p50 / p95 in ms): multi-tier exposure `exposure/exposure` 18.97 / 22.95; tier-1 view `exposure/tier1_view` 3.95 / 5.29; max-flow `flow/maxflow` 5.80 / 12.45 (2,294 calls); order projection `shortage/orders` 32.71 / 46.26; execution preflight 5.21 / 6.60 and atomic write 6.26 / 7.62. These are local measurements, not deployment latency. The full table is in [RESULTS.md](eval/RESULTS.md#named-query-performance).
+
+The allocator is greedy and makes no optimality claim. Recovery is **protected (projected)**: purchase orders are committed in the graph, no parts have physically arrived.
 
 ## 10. Setup
 
@@ -196,7 +211,12 @@ Run `make test` for backend tests. Run `pnpm --dir frontend lint` and `pnpm --di
 - The sandbox uses a deterministic reality model, not a forecast of a real supplier’s behaviour.
 - Dependency traversal is bounded. Unknown or unmodelled entities do not establish safety.
 - The browser currently shares a live world. Resets and changes can invalidate another plan.
-- Routing, proactive risk scans, live arrival tracking and the planned memory reliability feedback are not established by this skeleton.
+- Routing, proactive risk scans, live arrival tracking and memory-driven supplier reliability updates are not implemented. Memory is recalled and shown to the agent; it does not change the allocator.
+- New purchase orders are checked against the capacity of the immediate upstream feeders only, not every deeper tier.
+- The allocator buys the full quantity of a reduced component, not only the net shortage, so a plan can overbuy (visible in the Panel Fire spend).
+- The report check verifies ids, evidence and numbers, not the meaning of every sentence.
+- The REST approve, reject, reset and inject endpoints are not authenticated; in a public demo anyone with the URL can use them on the shared synthetic world.
+- Purchase orders are records in a synthetic graph. No real supplier is contacted.
 
 ## 12. AI disclosure
 
@@ -204,7 +224,7 @@ Read the [AI assistance disclosure](docs/AI_DISCLOSURE.md) and [design decisions
 
 `docs/PLAN.md` holds planning notes written before the start (allowed by rule 8); all code was written after Oct 15 00:01 IST, and the commit history shows it.
 
-The [plan](docs/PLAN.md) is historical design material. The implemented-model and architecture documents identify where the current code differs. Final numbers, media and publication links remain marked with TODOs for review.
+The [plan](docs/PLAN.md) is historical design material. The implemented-model and architecture documents identify where the current code differs. Evaluation numbers come from `make eval`; media and publication links are still marked TODO.
 
 ## 13. Credits
 
