@@ -39,3 +39,6 @@ agent-workspace: ## create ../domino-agent so Claude Code can be the agent over 
 
 spike: ## M1 capability spike -> docs/SPIKE.md
 	uv run --project backend python scripts/spike.py
+
+queries-md: ## regenerate docs/QUERIES.md from backend/domino/queries
+	uv run --project backend python scripts/gen_queries_md.py
