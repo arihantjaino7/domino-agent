@@ -91,7 +91,7 @@ function TopBar({ view, go }: { view: ViewId; go: (v: ViewId) => void }) {
   const state =
     m.phase === 'idle' ? ['none', 'No disruption'] : m.phase === 'running' ? ['covered', 'DOMINO is working'] : m.phase === 'awaiting' ? ['covered', 'Waiting for your OK']
       : m.phase === 'approving' ? ['covered', 'Placing the orders'] : m.phase === 'failed' ? ['disrupted', 'Run stopped'] : m.executed ? ['protected', 'Plan approved and checked'] : ['protected', 'Run complete']
-  const MODES: [Mode, string, string][] = [['scripted', 'Demo', 'Free offline demo run'], ['mcp', 'Claude Code', 'Claude Code drives DOMINO over MCP; you watch here'], ['api', 'Claude API', 'Claude runs in the backend (paid)']]
+  const MODES: [Mode, string, string][] = [['scripted', 'Demo', 'Free offline demo run'], ['replay', 'Replay', 'Watch a recorded run: free, and nothing in the graph changes'], ['mcp', 'Claude Code', 'Claude Code drives DOMINO over MCP; you watch here'], ['api', 'Claude API', 'Claude runs in the backend (paid)']]
   return (
     <header className="top">
       <div className="top-left">
@@ -117,7 +117,7 @@ function TopBar({ view, go }: { view: ViewId; go: (v: ViewId) => void }) {
         </div>
         <span className="run-state">
           <i className={`dot st-${state[0]} ${m.phase === 'awaiting' || m.phase === 'running' ? 'pulse' : ''}`} />
-          {state[1]}
+          {mode === 'replay' && m.phase !== 'idle' ? `Replay · ${state[1]}` : state[1]}
         </span>
       </div>
     </header>

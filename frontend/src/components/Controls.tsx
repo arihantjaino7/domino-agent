@@ -31,7 +31,8 @@ export function RunPanel({ compact }: { compact?: boolean }) {
   const m = useModel()
   const working = m.phase === 'running' || m.phase === 'approving' || st.busy
   const short: Record<string, string> = { monsoon: 'Flood', panel_fire: 'Factory fire', non_event: 'Port strike' }
-  const runLabel = st.mode === 'mcp' ? 'Watch Claude Code' : st.mode === 'api' ? 'Run with Claude' : 'Run the demo'
+  const runLabel = st.mode === 'mcp' ? 'Watch Claude Code' : st.mode === 'api' ? 'Run with Claude' : st.mode === 'replay' ? 'Play the recording' : 'Run the demo'
+  if (st.mode === 'replay') return <ReplayPanel compact={compact} working={working} label={runLabel} />
   return (
     <div>
       {!compact && st.mode !== 'mcp' && (
@@ -59,6 +60,48 @@ export function RunPanel({ compact }: { compact?: boolean }) {
         <button type="button" className="btn btn-ghost" disabled={working} onClick={() => void st.reset()} title="Undo every disruption and order: back to the starting world">Reset the world</button>
         <Progress />
       </div>
+    </div>
+  )
+}
+
+const when = (iso: string) => {
+  const d = new Date(iso)
+  return Number.isNaN(d.getTime()) ? iso : d.toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+}
+
+/** Replay mode: pick a published recording and play it. Nothing is sent to the graph. */
+function ReplayPanel({ compact, working, label }: { compact?: boolean; working: boolean; label: string }) {
+  const st = useStore()
+  const sel = st.replays.find((r) => r.id === st.replayId) ?? null
+  const rec = st.recording
+  if (st.replays.length === 0) return <p className="plain">No recordings are published yet.</p>
+  return (
+    <div>
+      {!compact && (
+        <div className="start">
+          {st.replays.map((r) => (
+            <button key={r.id} type="button" className={`scn ${st.replayId === r.id ? 'on' : ''}`} disabled={working} onClick={() => st.setReplay(r.id)}>
+              <span className="sub">{r.real_model ? r.agent : `${r.agent}, not a model`}</span>
+              <b>{r.title}</b>
+              <span>Recorded {when(r.recorded_utc)}. {r.tool_calls} tool calls.{r.note ? ` ${r.note}` : ''}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="start-actions">
+        {compact && (
+          <select className="pick" aria-label="Recording to play" value={st.replayId ?? ''} disabled={working} onChange={(e) => st.setReplay(e.target.value)}>
+            {st.replays.map((r) => <option key={r.id} value={r.id}>{r.title} ({r.real_model ? r.agent : 'scripted'})</option>)}
+          </select>
+        )}
+        <button type="button" className="btn btn-accent" disabled={working || !sel} onClick={() => void st.run()}>{working ? 'Playing' : label}</button>
+        {rec && !working && <button type="button" className="btn btn-ghost" onClick={() => void st.reset()}>Clear</button>}
+        <Progress />
+      </div>
+      <p className="sub" style={{ marginTop: 10 }}>
+        {rec ? `Playing a recording of ${rec.real_model ? `a real ${rec.agent} run` : 'the scripted stand-in'} from ${when(rec.recorded_utc)}. ` : 'A replay plays a recorded run back. '}
+        Every number is what the engines returned at the time. Nothing in the graph is changed, and your Approve only continues the recording.
+      </p>
     </div>
   )
 }

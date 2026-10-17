@@ -1,4 +1,4 @@
-import type { Memory, Places, Scenario, Summary, WorldGraph } from './types'
+import type { Memory, Places, Recording, ReplayMeta, Scenario, Summary, WorldGraph } from './types'
 
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, {
@@ -23,6 +23,8 @@ export const api = {
   summary: () => req<Summary>('/api/world/summary'),
   scenarios: () => req<{ scenarios: Scenario[] }>('/api/scenarios').then((r) => r.scenarios),
   places: () => req<Places>('/api/world/places'),
+  replays: () => req<{ replays: ReplayMeta[] }>('/api/replays').then((r) => r.replays),
+  replay: (id: string) => req<Recording>(`/api/replays/${encodeURIComponent(id)}`),
   memory: (source: 'real' | 'demo') => req<Memory>(`/api/memory?source=${source}`),
   reset: () => req<{ graph: string }>('/api/world/reset', { method: 'POST' }),
   inject: (body: { entity_ids: string[]; kind: string; title: string; capacity_factor: number; duration_days: number }) =>

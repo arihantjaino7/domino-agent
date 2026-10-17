@@ -20,6 +20,7 @@ from domino.agent import external
 from domino.agent.context import get_context
 from domino.agent.loop import AgentRun, approve, new_run, reject, run_phase
 from domino.agent.scenarios import SCENARIOS
+from domino.api.replays import attach_recorder
 from domino.config import settings
 from domino.graph.lifecycle import reset_live
 from domino.mcp.server import mcp
@@ -114,6 +115,8 @@ async def watch_external() -> dict:
     """Reset the live world and open a fresh external run for an MCP client (Claude Code) to drive."""
     await asyncio.to_thread(reset_live)
     run = external.reset_external()
+    if settings.record_replays:
+        attach_recorder(run)
     return {"run_id": run.id, "graph": run.graph}
 
 
@@ -132,6 +135,8 @@ async def start_run(body: StartRun, request: Request) -> dict:
                   scripted=body.dry_run)
     external.register(run)
     CLIENTS[run.id] = client
+    if settings.record_replays:
+        attach_recorder(run)
     from domino.agent.loop import emit
     emit(run, "run.started", {"scenario": scenario, "alert": alert, "dry_run": body.dry_run,
                               "model": "scripted" if body.dry_run else settings.domino_model})

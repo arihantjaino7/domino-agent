@@ -18,6 +18,8 @@ RUN uv sync --frozen --no-dev --no-install-project
 COPY backend/ ./
 RUN uv sync --frozen --no-dev
 COPY --from=web /web/dist /app/frontend/dist
+# Published recordings for replay mode (GET /api/replays): a judge can watch a run without any API key.
+COPY demo/replays/ /app/demo/replays/
 ENV PATH=/app/backend/.venv/bin:$PATH DOMINO_STATIC_DIR=/app/frontend/dist
 EXPOSE 8000
 # Build the world only if it is missing (a restart keeps the live demo), then serve.

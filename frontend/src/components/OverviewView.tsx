@@ -249,7 +249,7 @@ export function OverviewView({ go }: { go: (v: ViewId) => void }) {
 
       {(m.phase === 'idle' || m.phase === 'failed' || (m.phase === 'done' && !d.declared)) && (
         <div className="card" style={{ marginBottom: 16 }}><div className="card-b">
-          <div className="side-h"><h2>{m.phase === 'idle' ? 'Start a disruption' : 'Run again'}</h2><span className="sub">{st.mode === 'scripted' ? 'Demo mode: free and offline' : st.mode === 'mcp' ? 'Claude Code drives DOMINO' : 'Claude runs in the backend'}</span></div>
+          <div className="side-h"><h2>{m.phase === 'idle' ? 'Start a disruption' : 'Run again'}</h2><span className="sub">{st.mode === 'scripted' ? 'Demo mode: free and offline' : st.mode === 'replay' ? 'Replay: a recorded run, nothing is changed' : st.mode === 'mcp' ? 'Claude Code drives DOMINO' : 'Claude runs in the backend'}</span></div>
           <RunPanel />
         </div></div>
       )}

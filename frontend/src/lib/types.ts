@@ -80,3 +80,22 @@ export interface Memory {
   lessons: { id: string; text: string; learned_on: string; incident_id: string; evidence: string[]; entities: MemoryEntity[] }[]
   counts: { incidents: number; lessons: number }
 }
+
+export interface ReplayMeta {
+  id: string
+  title: string
+  scenario: string
+  agent: string
+  /** true when a real model chose the tools (Claude Code over MCP, or the Claude API) */
+  real_model: boolean
+  recorded_utc: string
+  note?: string | null
+  tool_calls: number
+  events: number
+}
+
+/** A recorded run: its events, plus the world view (graph and summary) at the moments the live war room refreshed. */
+export interface Recording extends Omit<ReplayMeta, 'events'> {
+  frames: { after_seq: number; graph: WorldGraph; summary: Summary }[]
+  events: RunEvent[]
+}

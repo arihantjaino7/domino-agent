@@ -25,6 +25,7 @@ services:
       FALKORDB_HOST: falkordb
       FALKORDB_PORT: "6379"
       DOMINO_STATIC_DIR: /app/frontend/dist
+      RECORD_REPLAYS: "false"  # visitors' runs are not saved; published replays ship in the image
     depends_on:
       falkordb:
         condition: service_healthy

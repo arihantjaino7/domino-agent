@@ -2,12 +2,12 @@ import { create } from 'zustand'
 import { api } from './api'
 import { useToasts } from './toasts'
 import { subscribe } from './sse'
-import type { NodeStatus, Places, RunEvent, RunStatus, Scenario, Summary, WorldGraph } from './types'
+import type { NodeStatus, Places, Recording, ReplayMeta, RunEvent, RunStatus, Scenario, Summary, WorldGraph } from './types'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 /* ---------- the agent's journey, as the sidebar shows it ---------- */
-export type Mode = 'scripted' | 'mcp' | 'api'
+export type Mode = 'scripted' | 'replay' | 'mcp' | 'api'
 export type StepId = 'detect' | 'trace' | 'impact' | 'options' | 'simulate' | 'approve' | 'verify'
 export const STEPS: { id: StepId; num: string; title: string; tools: string[] }[] = [
   { id: 'detect', num: '01', title: 'Detect', tools: ['resolve_entities', 'declare_incident'] },
@@ -81,6 +81,10 @@ interface State {
   places: Places | null
   scenario: string
   mode: Mode
+  replays: ReplayMeta[]
+  replayId: string | null
+  /** the recording being played (replay mode only) */
+  recording: Recording | null
   theme: 'light' | 'dark'
   runId: string | null
   runStatus: RunStatus
@@ -101,6 +105,7 @@ interface State {
   select: (s: StepId | null) => void
   setHoverEvidence: (id: string | null) => void
   run: () => Promise<void>
+  setReplay: (id: string) => void
   approve: () => Promise<void>
   reject: (feedback: string) => Promise<void>
   reset: () => Promise<void>
@@ -274,6 +279,18 @@ function announce(ev: RunEvent) {
 }
 
 let unsubscribe: (() => void) | null = null
+
+/* ---------- replay: play a recorded run through the same applyEvent as live events ---------- */
+
+let replayTimer: ReturnType<typeof setTimeout> | null = null
+let replayNext: (() => void) | null = null // resumes playback after the recorded approval
+function stopReplay() {
+  if (replayTimer) clearTimeout(replayTimer)
+  replayTimer = null
+  replayNext = null
+}
+/** Real gaps between events (the model thinking, a person deciding), capped so a viewer is not kept waiting. */
+const gapMs = (a: RunEvent, b: RunEvent) => Math.min(1400, Math.max(90, (b.ts - a.ts) * 1000))
 const REFRESH_ON = new Set(['declare_incident', 'flag_orders_at_risk', 'verify_execution'])
 
 function initialTheme(): 'light' | 'dark' {
@@ -288,6 +305,7 @@ function initialTheme(): 'light' | 'dark' {
 
 export const useStore = create<State>((set, get) => ({
   graph: null, summary: null, scenarios: [], places: null, scenario: 'monsoon', mode: 'scripted', theme: initialTheme(),
+  replays: [], replayId: null, recording: null,
   runId: null, runStatus: 'idle', events: [], steps: [], pendingDecision: null, selected: null, hoverEvidence: null,
   error: null, busy: false, ready: false, derived: EMPTY,
 
@@ -295,6 +313,7 @@ export const useStore = create<State>((set, get) => ({
     try {
       const [graph, summary, scenarios, places] = await Promise.all([api.graph(), api.summary(), api.scenarios(), api.places()])
       set({ graph, summary, scenarios, places, error: null, ready: true, derived: derive(graph, summary, get().steps, get().events) })
+      api.replays().then((replays) => set((s) => ({ replays, replayId: s.replayId ?? replays[0]?.id ?? null })), () => { /* replays are optional */ })
     } catch (e) {
       set({ ready: true, error: `Could not load the world. ${String((e as Error).message ?? e)}` })
     }
@@ -304,7 +323,19 @@ export const useStore = create<State>((set, get) => ({
     set({ graph, summary, derived: derive(graph, summary, get().steps, get().events) })
   },
   setScenario: (scenario) => set({ scenario }),
-  setMode: (mode) => set({ mode }),
+  setMode: (mode) => {
+    const was = get().mode
+    if (mode === was) return
+    if (was === 'replay' || mode === 'replay') {
+      // Entering or leaving a recording: clear the screen and show the live world again.
+      stopReplay(); unsubscribe?.(); unsubscribe = null
+      set({ mode, recording: null, runId: null, runStatus: 'idle', events: [], steps: [], pendingDecision: null, selected: null })
+      void get().refresh()
+      return
+    }
+    set({ mode })
+  },
+  setReplay: (replayId) => set({ replayId }),
   setTheme: (theme) => {
     try { localStorage.setItem('domino-theme', theme) } catch { /* storage unavailable */ }
     document.documentElement.dataset.theme = theme
@@ -315,7 +346,40 @@ export const useStore = create<State>((set, get) => ({
 
   run: async () => {
     unsubscribe?.()
+    stopReplay()
     set({ busy: true, error: null, events: [], steps: [], pendingDecision: null, runStatus: 'running', selected: null })
+    if (get().mode === 'replay') {
+      // Only the recording is read from the backend: no reset, no run, no approval reaches the graph.
+      try {
+        const id = get().replayId
+        if (!id) throw new Error('No recording is published yet')
+        const rec = await api.replay(id)
+        const frames = [...rec.frames].sort((a, b) => a.after_seq - b.after_seq)
+        const first = frames[0]
+        const graph = first?.graph ?? get().graph, summary = first?.summary ?? get().summary
+        set({ recording: rec, busy: false, graph, summary, derived: derive(graph, summary, [], []) })
+        const play = (i: number) => {
+          const ev = rec.events[i]
+          if (!ev) return
+          const frame = frames.find((f) => f.after_seq === ev.seq)
+          set((s) => ({ ...applyEvent(frame ? { ...s, graph: frame.graph, summary: frame.summary } : s, ev),
+            ...(frame ? { graph: frame.graph, summary: frame.summary } : {}) }))
+          announce(ev)
+          const next = rec.events[i + 1]
+          if (!next) return
+          if (ev.type === 'approval.required') {
+            useToasts.getState().push('In the recording a person approved this plan here. Press Approve to continue.')
+            replayNext = () => { replayNext = null; replayTimer = setTimeout(() => play(i + 1), 400) }
+            return
+          }
+          replayTimer = setTimeout(() => play(i + 1), gapMs(ev, next))
+        }
+        play(0)
+      } catch (e) {
+        set({ busy: false, runStatus: 'failed', error: String((e as Error).message ?? e) })
+      }
+      return
+    }
     try {
       let run_id: string
       if (get().mode === 'mcp') {
@@ -339,6 +403,10 @@ export const useStore = create<State>((set, get) => ({
     }
   },
   approve: async () => {
+    if (get().mode === 'replay') {
+      if (replayNext && get().runStatus === 'awaiting_approval') { set({ runStatus: 'approving' }); replayNext() }
+      return
+    }
     const { runId, pendingDecision } = get()
     if (!runId || !pendingDecision) return
     set({ runStatus: 'approving' })
@@ -349,12 +417,23 @@ export const useStore = create<State>((set, get) => ({
     }
   },
   reject: async (feedback) => {
+    if (get().mode === 'replay') {
+      useToasts.getState().push('This recording was approved, so it cannot be rejected here. Switch to Demo to try a rejection.')
+      return
+    }
     const { runId } = get()
     if (!runId) return
     try { await api.reject(runId, feedback) } catch (e) { set({ error: String((e as Error).message ?? e) }) }
   },
   reset: async () => {
     unsubscribe?.()
+    stopReplay()
+    if (get().mode === 'replay') {
+      // A replay never touches the live world; this only clears the screen.
+      set({ recording: null, runId: null, runStatus: 'idle', events: [], steps: [], pendingDecision: null, selected: null })
+      await get().refresh()
+      return
+    }
     set({ busy: true, runId: null, runStatus: 'idle', events: [], steps: [], pendingDecision: null, selected: null })
     try {
       await api.reset()
