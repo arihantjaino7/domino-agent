@@ -64,7 +64,7 @@ function MemoryPanel({ refresh }: { refresh: string }) {
         <p className="plain muted">Nothing remembered yet. {source === 'demo' ? 'Finish a demo run and its lessons appear here.' : 'Lessons from real agent runs appear here once a run finishes.'}</p>
       ) : (
         <>
-          <p className="sub">{plural(mem.counts.incidents, 'past incident')}, {plural(mem.counts.lessons, 'lesson')}. Kept in <span className="mono">{mem.graph}</span>, which survives a world reset. The agent reads these before it plans.</p>
+          <p className="sub">{plural(mem.counts.incidents, 'past incident')}, {plural(mem.counts.lessons, 'lesson')}. Kept in <span className="mono">{mem.graph}</span>, which survives a world reset. The agent can look these up with its recall_history tool.</p>
           {mem.incidents.map((inc) => {
             const ls = mem.lessons.filter((l) => l.incident_id === inc.id)
             return (
