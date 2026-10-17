@@ -1,0 +1,4 @@
+# Large or private: render outputs, your audio, the kit zip and working files stay out of Git.
+inputs/
+renders/
+work/

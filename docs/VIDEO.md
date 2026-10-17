@@ -1,5 +1,8 @@
 # Demo video: step-by-step guide
 
+> **Update (Oct 17, night):** the voiceover is now `video/voiceover-script.md`, the picture-per-phrase storyboard is `video/cues.md`, the allowed numbers are `video/facts.json`, and Codex builds the video from `docs/CODEX_VIDEO_PROMPT.md`. Use this file only for background; where it differs, the `video/` files win.
+
+
 Target: **3:00 or less**. Language of the video: English (judges). Every number below comes from the seed-42 world (the one the war room runs) and was checked against the recorded run on Oct 17. PLAN §16 has older planning numbers (45 exposed, 27 late, 600 nodes): **do not use those.**
 
 Numbers to say:

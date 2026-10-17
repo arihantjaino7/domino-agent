@@ -1,0 +1,96 @@
+{
+  "_how": "Every value was read from eval/results.json or the recorded run demo/replays/monsoon-scripted.json (seed 42). Do not type other numbers on screen.",
+  "world": {
+    "seed": 42,
+    "orders_in_horizon": 117
+  },
+  "alert": "Severe monsoon flooding across Ayutthaya and the Chao Phraya Basin; industrial estates closed, recovery expected in 3-5 weeks.",
+  "tier1_view_affected_suppliers": 0,
+  "multi_tier": {
+    "exposed_tier1_suppliers": 2,
+    "exposed_orders": 38
+  },
+  "if_nobody_acts": {
+    "late_orders": 13,
+    "late_fees_usd": 536370
+  },
+  "capacity_BAT-4S_at_PL-BAC": {
+    "tier1_view_per_week": 1900,
+    "true_per_week": 700
+  },
+  "rejected_backup": {
+    "site": "AmpereOne Johor Bahru (S-AMPR-JHB)",
+    "reason": "no remaining clean capacity: its cells come from the flooded VoltCell Ayutthaya (S-VOLT-AYU)"
+  },
+  "plans_tested_seed42_monsoon": [
+    {
+      "id": "S0",
+      "name": "Do nothing",
+      "late_orders": 13,
+      "spend_usd": 0
+    },
+    {
+      "id": "S1",
+      "name": "Naive baseline",
+      "late_orders": 7,
+      "spend_usd": 108169
+    },
+    {
+      "id": "S2",
+      "name": "Lowest cost",
+      "late_orders": 3,
+      "spend_usd": 114982
+    },
+    {
+      "id": "S3",
+      "name": "Max service",
+      "late_orders": 1,
+      "spend_usd": 162569
+    },
+    {
+      "id": "S4",
+      "name": "DOMINO balanced",
+      "late_orders": 1,
+      "spend_usd": 142475
+    }
+  ],
+  "recommended_plan": "S4",
+  "after_approval": {
+    "purchase_orders": 4,
+    "orders_protected_projected": 12,
+    "still_late": 1,
+    "checks_passed": 9,
+    "checks_total": 9
+  },
+  "evaluation": {
+    "cases": 40,
+    "worlds": 20,
+    "orders_total": 4766,
+    "late_orders": {
+      "do_nothing": 383,
+      "tier1_view_plan": 130,
+      "graph_aware_plan": 71,
+      "domino_plan": 57
+    },
+    "tier1_plan_picked_zero_capacity_source_in_cases": 20,
+    "oracle_projection_mismatches": "0 of 176",
+    "failures": 0
+  },
+  "tests": {
+    "backend": 91,
+    "evaluation": 24
+  },
+  "labels_to_use": [
+    "protected (projected)",
+    "Tier-1 view",
+    "Recorded run"
+  ],
+  "labels_never": [
+    "optimal",
+    "fulfilled",
+    "delivered",
+    "risk scan",
+    "normal tool"
+  ],
+  "github_url": "https://github.com/arihantjaino7/domino-agent"
+}
