@@ -430,9 +430,9 @@ export const useStore = create<State>((set, get) => ({
       useToasts.getState().push('This recording was approved, so it cannot be rejected here. Switch to Demo to try a rejection.')
       return
     }
-    const { runId } = get()
+    const { runId, pendingDecision } = get()
     if (!runId) return
-    try { await api.reject(runId, feedback) } catch (e) { set({ error: String((e as Error).message ?? e) }) }
+    try { await api.reject(runId, feedback, pendingDecision) } catch (e) { set({ error: String((e as Error).message ?? e) }) }
   },
   reset: async () => {
     unsubscribe?.()

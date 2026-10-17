@@ -60,9 +60,11 @@ def find_alternatives(graph: str, component_id: str, plant_id: str, horizon: int
         site_cap = capacity[r["component"]][r["site"]]
         clean = min(r["spare_wk"] - r["reserved_wk"], site_cap["site_clean_wk"])
         if clean <= 0:
+            # Say which limit is at zero: the inputs (all paths through a disrupted site) or the approved spare.
+            why = ("every input path runs through a disrupted site" if site_cap["site_clean_wk"] <= 0 else
+                   f"its approved spare ({r['spare_wk']}/wk) is already reserved by committed purchase orders")
             rejected.append({**base, "reason": "no_remaining_capacity", "remaining_clean_wk": 0,
-                             "nominal_wk": min(r["spare_wk"], site_cap["site_nominal_wk"]),
-                             "detail": "every input path runs through a disrupted site"})
+                             "nominal_wk": min(r["spare_wk"], site_cap["site_nominal_wk"]), "detail": why})
             continue
         # Extra volume from a site that already holds a contract here shares that site's clean capacity;
         # the joint allocation (M5) decides how it is split.

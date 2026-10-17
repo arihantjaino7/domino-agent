@@ -17,8 +17,18 @@ def _today() -> str:
     return dt.date.today().isoformat()
 
 
+def new_incident_id(graph: str | None = None) -> str:
+    """The next free memory incident id (MI-0001, MI-0002...). Unlike world incident ids, it never restarts."""
+    g = graph or settings.memory_graph
+    n = run_query("memory/incident_count", graph=g)[0]["n"] if _exists(g) else 0
+    taken = {r["id"] for r in list_incidents(g)}
+    while f"MI-{n + 1:04d}" in taken:
+        n += 1
+    return f"MI-{n + 1:04d}"
+
+
 def record_incident(incident: dict[str, Any], entities: list[dict[str, Any]], graph: str | None = None) -> int:
-    """incident: {id, title, kind, outcome}; entities: [{id, kind, name, role}]."""
+    """incident: {id, incident_id (the world's), title, kind, outcome}; entities: [{id, kind, name, role}]."""
     rows = run_query("memory/write_incident", {"incident": {**incident, "learned_on": _today()},
                                                 "entities": entities},
                      ro=False, graph=graph or settings.memory_graph)
@@ -26,13 +36,19 @@ def record_incident(incident: dict[str, Any], entities: list[dict[str, Any]], gr
 
 
 def record_lessons(incident_id: str, lessons: list[dict[str, Any]], graph: str | None = None) -> list[str]:
-    """lessons: [{text, entity_ids, evidence}] -> lesson ids."""
+    """lessons: [{text, entity_ids, evidence}] -> lesson ids. A second call for the same incident adds lessons
+    (L-<incident>-3, -4...) instead of overwriting the first ones."""
     today = _today()
-    rows = [{"id": f"L-{incident_id}-{i + 1}", "text": l["text"], "incident_id": incident_id, "learned_on": today,
-             "entity_ids": sorted(set(l.get("entity_ids", []))), "evidence": l.get("evidence", "")}
-            for i, l in enumerate(lessons)]
+    g = graph or settings.memory_graph
+    have = run_query("memory/incident_lessons", {"incident_id": incident_id}, graph=g)[0] if _exists(g) else \
+        {"n": 0, "texts": []}
+    known = set(have["texts"])
+    new = [l for l in lessons if l["text"] not in known]  # the same lesson sent twice is stored once
+    rows = [{"id": f"L-{incident_id}-{have['n'] + i + 1}", "text": l["text"], "incident_id": incident_id,
+             "learned_on": today, "entity_ids": sorted(set(l.get("entity_ids", []))), "evidence": l.get("evidence", "")}
+            for i, l in enumerate(new)]
     if rows:
-        run_query("memory/write_lessons", {"lessons": rows}, ro=False, graph=graph or settings.memory_graph)
+        run_query("memory/write_lessons", {"lessons": rows}, ro=False, graph=g)
     return [r["id"] for r in rows]
 
 

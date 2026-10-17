@@ -1,6 +1,6 @@
 """Decision lifecycle and the executor (PLAN §7.11). Pure and deterministic; no LLM.
 
-propose_decision -> approve_decision (bound to plan_hash + world_version) -> execute_plan:
+propose_decision -> approve_decision (bound to plan_hash + world_version) -> execute_plan, or reject_decision:
   preflight read (every reference checked) -> one atomic write -> receipt compared with the plan (V9).
 Running the same execution twice creates nothing the second time ("already_executed").
 """
@@ -41,6 +41,14 @@ def approve_decision(graph: str, plan: dict[str, Any], approved_by: str) -> dict
     if not rows:
         return {"outcome": "not_approvable", "detail": f"decision is {state['status']} or plan_hash differs"}
     return {"outcome": "ok", "status": "approved", "approved_by": approved_by}
+
+
+def reject_decision(graph: str, decision_id: str, feedback: str, rejected_by: str = "web") -> dict[str, Any]:
+    rows = run_query("decision/reject", {"decision_id": decision_id, "feedback": feedback[:1000],
+                                         "rejected_by": rejected_by}, ro=False, graph=graph)
+    if not rows:
+        return {"outcome": "not_rejectable", "detail": f"{decision_id} is not a proposed decision"}
+    return {"outcome": "ok", "status": "rejected"}
 
 
 def _pos_param(plan: dict[str, Any]) -> list[dict[str, Any]]:

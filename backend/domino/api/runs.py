@@ -160,22 +160,29 @@ async def run_events(run_id: str, request: Request) -> EventSourceResponse:
     start = int(request.headers.get("last-event-id") or 0)
 
     async def stream():
+        # Each reader has its own wake-up, cleared BEFORE it drains: an event emitted at any point is either
+        # drained now or wakes the next wait. (A shared event cleared by one tab could leave another waiting.)
+        wake = asyncio.Event()
+        listener = lambda _e: wake.set()  # noqa: E731
+        run.listeners.append(listener)
         sent = start
-        while True:
-            while sent < len(run.events):
-                ev = run.events[sent]
-                sent += 1
-                yield {"id": str(ev["seq"]), "event": ev["type"], "data": _json(ev)}
-            if run.status in ("completed", "failed") and sent >= len(run.events):
-                return
-            if await request.is_disconnected():
-                return
-            signal = external.signal(run_id)
-            signal.clear()
-            try:
-                await asyncio.wait_for(signal.wait(), timeout=15)
-            except asyncio.TimeoutError:
-                pass
+        try:
+            while True:
+                wake.clear()
+                while sent < len(run.events):
+                    ev = run.events[sent]
+                    sent += 1
+                    yield {"id": str(ev["seq"]), "event": ev["type"], "data": _json(ev)}
+                if run.status in ("completed", "failed") and sent >= len(run.events):
+                    return
+                if await request.is_disconnected():
+                    return
+                try:
+                    await asyncio.wait_for(wake.wait(), timeout=15)
+                except asyncio.TimeoutError:
+                    pass
+        finally:
+            run.listeners.remove(listener)
 
     return EventSourceResponse(stream(), ping=10, headers={"X-Accel-Buffering": "no"})
 
@@ -207,10 +214,17 @@ async def approve_run(run_id: str, body: Approval) -> dict:
 @router.post("/runs/{run_id}/reject")
 async def reject_run(run_id: str, body: Rejection) -> dict:
     run = _get(run_id)
-    if run.status != "awaiting_approval":
+    pending = get_context(run_id).pending
+    if run.status != "awaiting_approval" or pending is None:
         raise HTTPException(409, f"run is {run.status}")
+    if body.decision_id and body.decision_id != pending["decision_id"]:
+        raise HTTPException(409, f"pending decision is {pending['decision_id']}")
     if run_id == external.EXTERNAL_ID:
-        external.reject_external(body.feedback)
+        try:
+            await external.reject_external(body.feedback)
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from exc
         return {"run_id": run_id, "status": "rejected; tell the agent in your MCP client"}
+    run.status = "rejecting"  # a second click now gets 409 instead of a second rejection
     _background(run, lambda mc: reject(run, body.feedback, CLIENTS[run_id], mc))
     return {"run_id": run_id, "status": "re-planning"}

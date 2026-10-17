@@ -16,6 +16,7 @@ from typing import Any
 
 from domino.agent.context import CONTEXTS, get_context, new_context
 from domino.agent.loop import AgentRun, emit, save
+from domino.agent.tools import record_approval_failure, record_rejection
 from domino.config import settings
 from domino.engines.executor import approve_decision, execute_plan
 
@@ -91,7 +92,7 @@ async def approve_external(approver: str) -> dict[str, Any]:
         raise ValueError(f"nothing awaits approval (run is {run.status})")
     approval = await asyncio.to_thread(approve_decision, run.graph, plan, approver)
     if approval["outcome"] != "ok":
-        ctx.pending = None
+        record_approval_failure(ctx, approval)  # get_decision_status now tells the agent why
         run.status = "running"
         emit(run, "approval.failed", approval)
         return approval
@@ -102,12 +103,10 @@ async def approve_external(approver: str) -> dict[str, Any]:
     return receipt
 
 
-def reject_external(feedback: str) -> None:
+async def reject_external(feedback: str) -> None:
     run, ctx = external_run(), get_context(EXTERNAL_ID)
     if ctx.pending is None:
         raise ValueError("nothing awaits approval")
-    decision = ctx.pending["decision_id"]
-    ctx.rejected[decision] = feedback
-    ctx.pending = None
+    decision = await asyncio.to_thread(record_rejection, ctx, feedback)
     run.status = "running"
     emit(run, "plan.rejected", {"decision_id": decision, "feedback": feedback})

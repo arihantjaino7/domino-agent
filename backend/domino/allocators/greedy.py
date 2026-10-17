@@ -228,3 +228,18 @@ def po_id(decision_id: str, site: str, component: str, plant: str) -> str:
 def plan_hash(plan: dict[str, Any]) -> str:
     core = {k: plan[k] for k in ("strategy", "decision_id", "world_version", "budget_cents", "pos")}
     return hashlib.sha256(json.dumps(core, sort_keys=True, separators=(",", ":")).encode()).hexdigest()[:16]
+
+
+def content_hash(plan: dict[str, Any]) -> str:
+    """What the plan buys, without its ids: the same purchases under a new decision id hash the same."""
+    pos = [{k: v for k, v in p.items() if k != "id"} for p in plan["pos"]]
+    core = {"strategy": plan["strategy"], "world_version": plan["world_version"], "pos": pos}
+    return hashlib.sha256(json.dumps(core, sort_keys=True, separators=(",", ":")).encode()).hexdigest()[:16]
+
+
+def rekey(plan: dict[str, Any], decision_id: str) -> dict[str, Any]:
+    """The same plan under another decision id (a revision after a rejection): new PO ids and plan_hash."""
+    out = {**plan, "decision_id": decision_id,
+           "pos": [{**p, "id": po_id(decision_id, p["site_id"], p["component_id"], p["plant_id"])} for p in plan["pos"]]}
+    out["plan_hash"] = plan_hash(out)
+    return out

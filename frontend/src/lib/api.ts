@@ -34,6 +34,6 @@ export const api = {
     req<{ run_id: string }>('/api/runs', { method: 'POST', body: JSON.stringify(body) }),
   approve: (runId: string, decisionId: string) =>
     req(`/api/runs/${runId}/approve`, { method: 'POST', body: JSON.stringify({ approver: 'war-room', decision_id: decisionId }) }),
-  reject: (runId: string, feedback: string) =>
-    req(`/api/runs/${runId}/reject`, { method: 'POST', body: JSON.stringify({ feedback }) }),
+  reject: (runId: string, feedback: string, decisionId?: string | null) =>
+    req(`/api/runs/${runId}/reject`, { method: 'POST', body: JSON.stringify({ feedback, decision_id: decisionId ?? undefined }) }),
 }

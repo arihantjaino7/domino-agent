@@ -69,7 +69,10 @@ function MemoryPanel({ refresh }: { refresh: string }) {
             const ls = mem.lessons.filter((l) => l.incident_id === inc.id)
             return (
               <div className="mem-inc" key={inc.id}>
-                <div className="mem-h"><span className="mono">{inc.id}</span><span className="sub">learned {learned(inc.learned_on)}</span></div>
+                <div className="mem-h">
+                  <span className="mono" title={inc.id !== inc.incident_id ? `memory record ${inc.id}` : undefined}>{inc.incident_id ?? inc.id}</span>
+                  <span className="sub">learned {learned(inc.learned_on)}</span>
+                </div>
                 {inc.title && inc.title !== inc.id && <p className="plain">{inc.title}</p>}
                 {ls.map((l) => (
                   <div className="mem-lesson" key={l.id}>

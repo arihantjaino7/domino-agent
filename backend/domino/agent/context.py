@@ -37,6 +37,9 @@ class RunContext:
     receipt: dict[str, Any] | None = None
     report: dict[str, Any] | None = None
     rejected: dict[str, str] = field(default_factory=dict)              # decision id -> human feedback
+    rejected_plans: dict[str, str] = field(default_factory=dict)        # content hash of a rejected plan -> feedback
+    approval_failed: dict[str, str] = field(default_factory=dict)       # decision id -> why approval could not run
+    memory_ids: dict[str, str] = field(default_factory=dict)            # world incident id -> its memory incident id
     memory_graph: str = field(default_factory=lambda: settings.memory_graph)  # scripted runs use memory:dryrun
     seen_ids: set[str] = field(default_factory=set)
     lock: threading.Lock = field(default_factory=threading.Lock)

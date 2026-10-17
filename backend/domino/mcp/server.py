@@ -201,8 +201,9 @@ async def get_decision_status(
     decision_id: Annotated[str, Field(description="Decision id returned by submit_plan_for_approval")],
     run_id: RunId = "",
 ) -> dict:
-    """Read-only: whether the human has approved (and the executor ran), rejected (with feedback), or not
-    yet answered. Use it after the human says they decided. It never executes anything."""
+    """Read-only: whether the human has approved (and the executor ran), rejected (with feedback), whether
+    the approval could not run (the world changed), or no answer yet. Use it after the human says they
+    decided. It never executes anything."""
     return await _call(T.get_decision_status, run_id, decision_id=decision_id)
 
 
@@ -232,7 +233,7 @@ async def submit_incident_report(
                                               "unknown_entity")],
     claims: Annotated[list[dict], Field(description=(
         "[{type: depends_on|exposed|late|rejected|protected|capacity|not_in_graph, text, entities: [ids], "
-        "evidence_ids: [E-ids], metric_refs: ['R-03.totals.projected_late', ...]}]"))],
+        "evidence_ids: [E-ids], metric_refs: ['R-03.totals.projected_late', 'R-10.strategies.S4.spend_usd', ...]}]"))],
     decision_id: Annotated[str | None, Field(description="Decision id, if a plan was approved")] = None,
     open_risks: Annotated[list[str], Field(description="Risks that remain")] = [],  # noqa: B006
     lessons: Annotated[list[str], Field(description="Lessons learned")] = [],  # noqa: B006

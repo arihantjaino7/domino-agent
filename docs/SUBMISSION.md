@@ -46,7 +46,7 @@ From `eval/RESULTS.md` (seeds 42–61, Monsoon and Panel Fire, 40 cases, 4,766 o
 - In the Panel Fire cases all three recovery methods reach 0 late orders, because the backup supplier is clean. The graph helps when the backup shares an upstream site.
 - Demo world, Monsoon: 13 late orders with no action → 1 late after the approved S4 plan, for $142,475.
 - Oracle agreement: exposure 998/998, projected-late 386/386, max-flow 85/85, evidence paths 85/85, 0 of 176 projection mismatches, 20/20 healthy worlds with 0 late.
-- Tests: 91 backend and 24 evaluation tests passing.
+- Tests: 99 backend and 24 evaluation tests passing.
 
 ## Do not claim
 

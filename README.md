@@ -124,7 +124,8 @@ The server is mounted at `/mcp`. It exposes these names from `backend/domino/mcp
 ## 8. Safety and verification
 
 - The LLM never writes Cypher. Tools call fixed, parameterised queries through deterministic engines.
-- Approval is bound to `plan_hash` and `world_version`. A changed world requires simulation again.
+- Approval is bound to `plan_hash` and `world_version`. A changed world requires simulation again, and the agent is told the approval could not run.
+- A rejection is recorded on the decision in the graph, with the human's feedback. The agent cannot resubmit the plan that was refused; a re-planned plan for the same strategy gets a revision id.
 - Execution runs preflight, writes atomically and compares its receipt with the plan. A unique PO-ID constraint guards against duplicates.
 - The final report is checked: every entity id, evidence id, result reference and stated number must come from this run's tool results, or the report is rejected.
 - Verification checks approved spare, BOM compatibility, clean capacity, arrival deadlines, budget, PO uniqueness, complete order coverage, joint material balance and receipt counts.
@@ -157,7 +158,7 @@ What the numbers say:
 
 **Scripted agent runs (free, plumbing only).** Monsoon, Panel Fire and the Antwerp non-event, 2 runs each: 6/6 pass. Disruptions paused for approval, placed no PO before approval and passed verification afterwards; the non-event answered `not_in_graph` and left the world unchanged. This proves the tool path, not the intelligence of a real model; real-model runs are not part of this evaluation.
 
-**Tests:** 91 backend tests (`make test`) and 24 evaluation tests (`uv run --project backend pytest eval`), all passing.
+**Tests:** 99 backend tests (`make test`) and 24 evaluation tests (`uv run --project backend pytest eval`), all passing.
 
 **Query latency** (local FalkorDB, `run_query` log, during evaluation; p50 / p95 in ms): multi-tier exposure `exposure/exposure` 18.97 / 22.95; tier-1 view `exposure/tier1_view` 3.95 / 5.29; max-flow `flow/maxflow` 5.80 / 12.45 (2,294 calls); order projection `shortage/orders` 32.71 / 46.26; execution preflight 5.21 / 6.60 and atomic write 6.26 / 7.62. These are local measurements, not deployment latency. The full table is in [RESULTS.md](eval/RESULTS.md#named-query-performance).
 

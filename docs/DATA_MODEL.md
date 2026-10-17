@@ -30,7 +30,7 @@ Seeded properties below are collected from `backend/domino/seed/generator.py` an
 | `Order` | `due_day`, `id`, `need_day`, `qty`, `risk_flag`, `status`, `value_cents`. Runtime adds `risk_reason`; status may become `protected_projected`. |
 | `Meta` | `id`, `world_version`, `seed`, `fingerprint`. Created by `queries/seed/meta.cypher`; incident declaration and execution increment the version. |
 | `Incident` | `id`, `kind`, `title`, `alert_text`, `started_day`, `expected_end_day`, `severity`, `status` (`open`). |
-| `Decision` | `id`, `strategy`, `status`, `plan_hash`, `world_version`, `budget_cents`, `rationale`; approval adds `approved_by`, execution adds `executed_day`. Writers set `proposed`, `approved`, then `executed`. |
+| `Decision` | `id`, `strategy`, `status`, `plan_hash`, `world_version`, `budget_cents`, `rationale`; approval adds `approved_by`, execution adds `executed_day`, rejection adds `rejected_by` and `feedback`. Writers set `proposed`, then `approved` and `executed`, or `rejected`. A plan re-submitted after a rejection gets a revision id (`DEC-...-v1-r2`). |
 | `PurchaseOrder` | `id`, `qty`, `rate_wk`, `unit_price_cents`, `mode`, `first_arrival_day`, `status` (`committed`), `created_by` (`domino`). IDs are deterministic in `allocators/greedy.py`. |
 | `Action` | `id`, `type` (`execute`), `actor` (`executor`), `day`, `payload_json`. |
 
@@ -110,9 +110,9 @@ graph LR
 
 | Label or relationship | Created properties |
 |---|---|
-| `Incident` | `id`, `title`, `outcome`, `learned_on`; `record_incident` also accepts extra incident fields such as `kind`. The current tool caller writes no `kind`. |
+| `Incident` | `id` (memory's own id, `MI-0001`, `MI-0002`...), `incident_id` (the id it had in its world run, e.g. `INC-0001`), `run_id`, `title`, `outcome`, `learned_on`. World incident ids restart after every reset, so memory keeps its own ids and a new run adds to memory instead of overwriting it. Memories written before Oct 18 use the world id as `id` and have no `incident_id`. |
 | `Entity` | `id`, `kind`, `name` for involved entities; an entity linked only by a lesson can initially have just `id`. |
-| `Lesson` | `id`, `text`, `incident_id`, `learned_on`, `evidence` (a string of evidence IDs). |
+| `Lesson` | `id` (`L-<memory incident>-<n>`), `text`, `incident_id` (the memory incident), `learned_on`, `evidence` (a string of evidence IDs). The same text sent twice for one incident is stored once. |
 | `(Incident)-[:INVOLVED]->(Entity)` | `role` |
 | `(Lesson)-[:ABOUT]->(Entity)` | — |
 
@@ -152,7 +152,7 @@ The exact-match index on `PurchaseOrder.id` is created first. The constraint pre
 - Add `Component.unit` and `Plant.aliases` (`seed/generator.py`).
 - `Site.disrupted_until` is added when an incident is declared, rather than at seed time; current writers use `active` and `disrupted`, without setting `degraded` (`seed/motifs.py`, `queries/incident/declare.cypher`).
 - Add `Order.risk_reason` on flagging; current writes use `open` and `protected_projected`, without setting `shipped` (`seed/generator.py`, `queries/agent/flag_orders.cypher`, `execute/write.cypher`).
-- Add `Decision.world_version` and `executed_day`; rejection is handled in run state, without a query that sets graph status `rejected` (`queries/decision/create.cypher`, `execute/write.cypher`, `agent/loop.py`).
+- Add `Decision.world_version` and `executed_day`; a human rejection sets graph status `rejected` with `rejected_by` and `feedback` (`queries/decision/create.cypher`, `decision/reject.cypher`, `execute/write.cypher`, `agent/tools.py`).
 - Purchase orders are written as `committed`; no current query advances them to `in_transit`, `received` or `delayed` (`queries/execute/write.cypher`).
 - Remove `Hold`: no seed or write query creates it (`seed/world.py`, `queries/`).
 - Remove `EXPOSES` and its `late_days`/`shortfall` fields: exposure is returned to the run context rather than written as incident edges (`engines/exposure.py`, `agent/tools.py`).

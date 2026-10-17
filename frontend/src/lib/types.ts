@@ -76,7 +76,7 @@ export interface MemoryEntity {
 export interface Memory {
   source: 'real' | 'demo'
   graph: string
-  incidents: { id: string; title: string; learned_on: string; outcome: string; entities: MemoryEntity[] }[]
+  incidents: { id: string; incident_id?: string; title: string; learned_on: string; outcome: string; entities: MemoryEntity[] }[]
   lessons: { id: string; text: string; learned_on: string; incident_id: string; evidence: string[]; entities: MemoryEntity[] }[]
   counts: { incidents: number; lessons: number }
 }
