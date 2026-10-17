@@ -1,6 +1,6 @@
 # Database evaluation environment incident
 
-Database recovery scoring is incomplete. This is an environment blocker, not a passing evaluation.
+**Historical record.** This incident blocked the first database evaluation on Oct 17. It was resolved the same evening (see the end of this file), and the full evaluation then completed with 0 failures; see [RESULTS.md](RESULTS.md).
 
 1. The local FalkorDB initially answered reads, but an isolated evaluation smoke run hit `GRAPH.COPY failed, could not fork`.
 2. Redis then reported `rdb_last_bgsave_status=err` and rejected writes with `MISCONF`. Docker could not read the container log or image metadata (`input/output error`); even `docker exec` could not execute the container shell.
