@@ -27,6 +27,8 @@ This is a synthetic world for Kestrel Devices. The seed generator and checked-in
 
 The UI groups tool calls into seven stages: Detect, Trace, Impact, Options, Simulate, Approve and Verify. The [architecture](docs/ARCHITECTURE.md) maps each stage to its tools.
 
+[EXPLAIN.md](docs/EXPLAIN.md) walks through one Monsoon run step by step with the demo world's numbers (exposure, max-flow, the AmpereOne rejection, the five plans, approval, execution and the nine checks).
+
 ## 4. Why a graph
 
 Adapted from PLAN §6. Planned capabilities are marked so this table does not claim they already work.
