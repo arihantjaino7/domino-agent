@@ -67,7 +67,8 @@ def after_call(run: AgentRun, tool: str, out: dict[str, Any] | None, error: str 
     ref = out.get("result_ref") if out else None
     emit(run, "tool.result", {"tool": tool, "is_error": error is not None, "result_ref": ref, "duration_ms": ms,
                               "summary": (error or json.dumps(out, default=str))[:400],
-                              "ui": ctx.ui.get(ref) if ref else None})
+                              "ui": ctx.ui.get(ref) if ref else None,
+                              "queries": ctx.queries.get(ref) if ref else None})
     if error:
         return
     if tool == "submit_plan_for_approval" and ctx.pending:

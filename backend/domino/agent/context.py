@@ -30,6 +30,7 @@ class RunContext:
     incident_id: str | None = None
     results: dict[str, dict[str, Any]] = field(default_factory=dict)     # R-xx -> compact summary
     ui: dict[str, dict[str, Any]] = field(default_factory=dict)          # R-xx -> full payload
+    queries: dict[str, list[dict[str, Any]]] = field(default_factory=dict)  # R-xx -> Cypher it ran (drawer)
     evidence: dict[str, list[str]] = field(default_factory=dict)         # E-n -> path of ids
     plans: dict[str, dict[str, Any]] = field(default_factory=dict)       # strategy -> plan
     pending: dict[str, Any] | None = None                                # plan awaiting approval

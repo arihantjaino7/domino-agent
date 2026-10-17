@@ -22,6 +22,7 @@ from domino.agent import external
 from domino.agent import tools as T
 from domino.agent.context import get_context
 from domino.graph.client import ping
+from domino.graph.run_query import capture_queries, group_records
 
 mcp = MCPServer(name="domino", instructions=(
     "DOMINO: supply-chain recovery tools over a FalkorDB graph of Kestrel Devices' multi-tier supply chain. "
@@ -39,8 +40,11 @@ async def _call(fn, run_id: str, **kwargs: Any) -> dict[str, Any]:
     t0 = time.monotonic()
 
     def work() -> dict[str, Any]:
-        with ctx.lock:
-            return fn(ctx, **kwargs)
+        with ctx.lock, capture_queries() as records:
+            out = fn(ctx, **kwargs)
+            if out.get("result_ref"):  # the exact Cypher behind this result, for the war room's drawer
+                ctx.queries[out["result_ref"]] = group_records(records)
+            return out
 
     try:
         out = await asyncio.to_thread(work)

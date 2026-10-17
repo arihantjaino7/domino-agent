@@ -185,7 +185,8 @@ async def run_phase(run: AgentRun, client: Any, mcp_client: Any) -> AgentRun:
             ref = None if is_error else _result_ref(text)
             emit(run, "tool.result", {"tool": call["name"], "is_error": is_error, "result_ref": ref,
                                       "duration_ms": round((time.monotonic() - started) * 1000),
-                                      "summary": text[:400], "ui": ctx.ui.get(ref) if ref else None})
+                                      "summary": text[:400], "ui": ctx.ui.get(ref) if ref else None,
+                                      "queries": ctx.queries.get(ref) if ref else None})
             results.append({"type": "tool_result", "tool_use_id": call["id"], "content": text, "is_error": is_error})
             gated |= call["name"] in GATES and not is_error
         run.messages.append({"role": "user", "content": results})  # all results in ONE message

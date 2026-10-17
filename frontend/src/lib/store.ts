@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { api } from './api'
-import { useToasts, useWipe } from './motion'
+import { useToasts } from './motion'
 import { subscribe } from './sse'
 import type { NodeStatus, Places, RunEvent, RunStatus, Scenario, Summary, WorldGraph } from './types'
 
@@ -30,7 +30,12 @@ export interface Step {
   ms?: number
   summary?: string
   ui?: any
+  queries?: QueryGroup[] | null
+  t?: number // seconds since the run started
 }
+
+/** One named Cypher query a tool ran (grouped by run_query.group_records), for the Cypher drawer. */
+export interface QueryGroup { name: string; cypher: string; params: Record<string, unknown>; ro: boolean; calls: number; rows: number; ms: number; graphs: string[] }
 
 export interface Capacity { component: string; plant: string; naive: number; trueWk: number; healthy: number; bottleneck: any[] }
 
@@ -61,6 +66,12 @@ export interface Derived {
   verify: any | null
   report: any | null
   spendCents: number | null
+  trace: any | null
+  alert: string | null
+  kind: string | null
+  lessons: { text: string }[]
+  memoryGraph: string | null
+  executedSeq: number | null
 }
 
 interface State {
@@ -100,7 +111,7 @@ const EMPTY: Derived = {
   status: {}, hop: {}, evidence: [], hotEdges: {}, tier1View: null, exposedTier1: [], shared: [], origins: [],
   components: [], products: [], plants: [], exposedOrders: null, lateOrders: null, customersHit: null, capacity: [],
   alternatives: [], resolve: null, declared: null, shortage: null, sim: null, plan: null, receipt: null, verify: null,
-  report: null, spendCents: null,
+  report: null, spendCents: null, trace: null, alert: null, kind: null, lessons: [], memoryGraph: null, executedSeq: null,
 }
 
 const RANK: Record<NodeStatus, number> = { none: 0, protected: 1, covered: 2, late: 3, disrupted: 4 }
@@ -118,6 +129,12 @@ export function derive(graph: WorldGraph | null, summary: Summary | null, steps:
   d.resolve = lastUi(steps, 'resolve_entities')
   d.declared = lastUi(steps, 'declare_incident')
   const trace = lastUi(steps, 'trace_exposure')
+  d.trace = trace
+  d.alert = events.find((e) => e.type === 'run.started')?.data.alert ?? null
+  d.kind = (steps.find((s) => s.tool === 'declare_incident')?.args.kind as string | undefined) ?? null
+  const rl = [...steps].reverse().find((s) => s.tool === 'record_lessons' && s.state === 'ok')
+  d.lessons = ((rl?.args.lessons as { text: string }[] | undefined) ?? []).filter((l) => l?.text)
+  d.memoryGraph = rl?.ui?.graph ?? null
   if (trace) {
     d.tier1View = trace.tier1_view?.directly_affected_tier1 ?? null
     d.exposedTier1 = trace.multi_tier?.tier1_sites ?? []
@@ -184,6 +201,7 @@ export function derive(graph: WorldGraph | null, summary: Summary | null, steps:
   }
   const executed = [...events].reverse().find((e) => e.type === 'action.executed')
   if (executed) {
+    d.executedSeq = executed.seq
     d.receipt = executed.data.receipt
     for (const oid of d.receipt?.orders_protected ?? []) {
       const o = orderInfo.get(oid)
@@ -225,7 +243,9 @@ function applyEvent(state: State, ev: RunEvent): Partial<State> {
     const i = steps.map((s) => s.tool === ev.data.tool && s.state === 'running').lastIndexOf(true)
     if (i >= 0) {
       steps = steps.slice()
-      steps[i] = { ...steps[i], state: ev.data.is_error ? 'error' : 'ok', ref: ev.data.result_ref, ms: ev.data.duration_ms, summary: ev.data.summary, ui: ev.data.ui }
+      const t0 = state.events.find((e) => e.type === 'run.started')?.ts ?? ev.ts
+      steps[i] = { ...steps[i], state: ev.data.is_error ? 'error' : 'ok', ref: ev.data.result_ref, ms: ev.data.duration_ms, summary: ev.data.summary, ui: ev.data.ui,
+        queries: ev.data.queries ?? null, t: Math.max(0, ev.ts - t0) }
     }
   } else if (ev.type === 'approval.required') {
     runStatus = 'awaiting_approval'; pendingDecision = ev.data.decision_id
@@ -239,20 +259,17 @@ function applyEvent(state: State, ev: RunEvent): Partial<State> {
   return { events, steps, runStatus, pendingDecision, derived: derive(state.graph, state.summary, steps, events) }
 }
 
-/** Side effects with a job: a toast when something new happened, a wipe when a human commitment executes. */
+/** Side effects with a job: a toast when something new happened. Every number comes from the event itself. */
 function announce(ev: RunEvent) {
   const toast = useToasts.getState().push
   if (ev.type === 'tool.result' && !ev.data.is_error) {
     const ui = ev.data.ui
-    if (ev.data.tool === 'declare_incident' && ui) toast(`${ui.incident_id} declared · ${ui.site_ids?.length} site(s) down`)
-    if (ev.data.tool === 'trace_exposure' && ui) toast(`Tier-1 view: ${ui.tier1_view?.directly_affected_tier1} · graph: ${ui.multi_tier?.exposed_tier1} exposed tier-1`)
+    if (ev.data.tool === 'declare_incident' && ui) toast(`${ui.incident_id} declared: ${ui.site_ids?.length} site(s) stopped`)
+    if (ev.data.tool === 'trace_exposure' && ui) toast(`A normal tool sees ${ui.tier1_view?.directly_affected_tier1} problems. DOMINO found ${ui.multi_tier?.exposed_tier1} suppliers in trouble.`)
   }
-  if (ev.type === 'approval.required') toast(`Plan ${ev.data.decision_id} needs your approval`)
-  if (ev.type === 'action.executed') {
-    useWipe.getState().play('06', 'Executing the plan')
-    toast(ev.data.receipt?.summary ?? 'Plan executed')
-  }
-  if (ev.type === 'run.completed') toast('Run complete · report validated')
+  if (ev.type === 'approval.required') toast('A rescue plan is ready. It needs your OK.')
+  if (ev.type === 'action.executed') toast(ev.data.receipt?.summary ?? 'Plan executed')
+  if (ev.type === 'run.completed') toast('Run complete. The report was checked against the graph.')
   if (ev.type === 'run.error') toast(`Run stopped: ${String(ev.data.error).slice(0, 80)}`)
 }
 
@@ -266,7 +283,7 @@ function initialTheme(): 'light' | 'dark' {
   } catch {
     /* storage unavailable */
   }
-  return 'light'
+  return 'dark'
 }
 
 export const useStore = create<State>((set, get) => ({

@@ -151,6 +151,24 @@ def run_query(
     return rows
 
 
+def group_records(records: list[QueryRecord]) -> list[dict[str, Any]]:
+    """One row per named query, in first-run order, for the Cypher drawer: the text, the first call's
+    params, how many times it ran, total rows and ms, and the graphs it touched (sandboxes included)."""
+    out: dict[str, dict[str, Any]] = {}
+    for r in records:
+        g = out.get(r.name)
+        if g is None:
+            out[r.name] = {"name": r.name, "cypher": r.cypher, "params": r.params, "ro": r.ro,
+                           "calls": 1, "rows": r.rows, "ms": r.ms, "graphs": [r.graph]}
+            continue
+        g["calls"] += 1
+        g["rows"] += r.rows
+        g["ms"] = round(g["ms"] + r.ms, 2)
+        if r.graph not in g["graphs"]:
+            g["graphs"].append(r.graph)
+    return list(out.values())
+
+
 def run_script(name: str, *, graph: str | None = None, timeout_ms: int | None = None) -> int:
     """Run a multi-statement file (statements separated by `;`), one write per statement.
 
