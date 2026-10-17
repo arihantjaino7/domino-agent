@@ -1,25 +1,28 @@
 import { create } from 'zustand'
 import { api } from './api'
+import { useToasts, useWipe } from './motion'
 import { subscribe } from './sse'
 import type { NodeStatus, Places, RunEvent, RunStatus, Scenario, Summary, WorldGraph } from './types'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-export type Phase = 'DETECT' | 'INVESTIGATE' | 'RECOVER' | 'SIMULATE' | 'ACT' | 'VERIFY'
-
-export const PHASE_OF: Record<string, Phase> = {
-  resolve_entities: 'DETECT', declare_incident: 'DETECT',
-  get_entity_context: 'INVESTIGATE', recall_history: 'INVESTIGATE', trace_exposure: 'INVESTIGATE',
-  explain_shared_dependencies: 'INVESTIGATE', project_shortages: 'INVESTIGATE', compute_true_capacity: 'INVESTIGATE',
-  find_alternatives: 'RECOVER', simulate_strategies: 'SIMULATE',
-  flag_orders_at_risk: 'ACT', submit_plan_for_approval: 'ACT',
-  verify_execution: 'VERIFY', record_lessons: 'VERIFY', submit_incident_report: 'VERIFY',
-}
+/* ---------- the agent's journey, as the sidebar shows it ---------- */
+export type StepId = 'detect' | 'trace' | 'impact' | 'options' | 'simulate' | 'approve' | 'verify'
+export const STEPS: { id: StepId; num: string; title: string; tools: string[] }[] = [
+  { id: 'detect', num: '01', title: 'Detect', tools: ['resolve_entities', 'declare_incident'] },
+  { id: 'trace', num: '02', title: 'Trace', tools: ['trace_exposure', 'explain_shared_dependencies', 'get_entity_context', 'recall_history'] },
+  { id: 'impact', num: '03', title: 'Impact', tools: ['project_shortages', 'flag_orders_at_risk'] },
+  { id: 'options', num: '04', title: 'Options', tools: ['compute_true_capacity', 'find_alternatives'] },
+  { id: 'simulate', num: '05', title: 'Simulate', tools: ['simulate_strategies'] },
+  { id: 'approve', num: '06', title: 'Approve', tools: ['submit_plan_for_approval'] },
+  { id: 'verify', num: '07', title: 'Verify', tools: ['verify_execution', 'record_lessons', 'submit_incident_report'] },
+]
+export const STEP_OF: Record<string, StepId> = Object.fromEntries(STEPS.flatMap((s) => s.tools.map((t) => [t, s.id])))
 
 export interface Step {
   step: number
   tool: string
-  phase: Phase
+  stepId: StepId
   args: Record<string, unknown>
   state: 'running' | 'ok' | 'error'
   ref?: string | null
@@ -28,16 +31,17 @@ export interface Step {
   ui?: any
 }
 
-export interface Capacity { component: string; plant: string; naive: number; trueWk: number }
+export interface Capacity { component: string; plant: string; naive: number; trueWk: number; healthy: number; bottleneck: any[] }
 
-/** Everything the canvas paints is derived from engine output carried by run events or the summary. */
+/** What every panel and the canvas show, derived ONLY from engine output carried by run events or the summary. */
 export interface Derived {
   status: Record<string, NodeStatus>
   hop: Record<string, number>
-  evidence: Record<string, string[]>
+  evidence: { id: string; path: string[]; component: string; product: string; plant: string; orders: number }[]
   hotEdges: Record<string, NodeStatus>
   tier1View: number | null
-  exposedTier1: string[]
+  exposedTier1: { site: string; via: string[] }[]
+  shared: { site: string; operator: string; dependents: string[]; fan_out: number }[]
   origins: string[]
   components: string[]
   products: string[]
@@ -46,6 +50,15 @@ export interface Derived {
   lateOrders: number | null
   customersHit: number | null
   capacity: Capacity[]
+  alternatives: any[]
+  resolve: any | null
+  declared: any | null
+  shortage: any | null
+  sim: any | null
+  plan: any | null
+  receipt: any | null
+  verify: any | null
+  report: any | null
   spendCents: number | null
 }
 
@@ -56,19 +69,25 @@ interface State {
   places: Places | null
   scenario: string
   dryRun: boolean
+  theme: 'light' | 'dark'
   runId: string | null
   runStatus: RunStatus
   events: RunEvent[]
   steps: Step[]
-  notes: string[]
   pendingDecision: string | null
+  selected: StepId | null
+  hoverEvidence: string | null
   error: string | null
   busy: boolean
+  ready: boolean
   derived: Derived
   load: () => Promise<void>
   refresh: () => Promise<void>
   setScenario: (s: string) => void
   setDryRun: (b: boolean) => void
+  setTheme: (t: 'light' | 'dark') => void
+  select: (s: StepId | null) => void
+  setHoverEvidence: (id: string | null) => void
   run: () => Promise<void>
   approve: () => Promise<void>
   reject: (feedback: string) => Promise<void>
@@ -77,50 +96,53 @@ interface State {
 }
 
 const EMPTY: Derived = {
-  status: {}, hop: {}, evidence: {}, hotEdges: {}, tier1View: null, exposedTier1: [], origins: [], components: [],
-  products: [], plants: [], exposedOrders: null, lateOrders: null, customersHit: null, capacity: [], spendCents: null,
+  status: {}, hop: {}, evidence: [], hotEdges: {}, tier1View: null, exposedTier1: [], shared: [], origins: [],
+  components: [], products: [], plants: [], exposedOrders: null, lateOrders: null, customersHit: null, capacity: [],
+  alternatives: [], resolve: null, declared: null, shortage: null, sim: null, plan: null, receipt: null, verify: null,
+  report: null, spendCents: null,
 }
 
 const RANK: Record<NodeStatus, number> = { none: 0, protected: 1, covered: 2, late: 3, disrupted: 4 }
 function mark(map: Record<string, NodeStatus>, id: string, s: NodeStatus) {
   if (RANK[s] > RANK[map[id] ?? 'none']) map[id] = s
 }
+const lastUi = (steps: Step[], tool: string) => [...steps].reverse().find((s) => s.tool === tool && s.ui)?.ui ?? null
 
 export function derive(graph: WorldGraph | null, summary: Summary | null, steps: Step[], events: RunEvent[]): Derived {
-  const d: Derived = { ...EMPTY, status: {}, hop: {}, evidence: {}, hotEdges: {}, capacity: [] }
+  const d: Derived = { ...EMPTY, status: {}, hop: {}, hotEdges: {}, evidence: [], capacity: [], alternatives: [] }
   if (!graph) return d
   for (const n of graph.nodes) if (n.kind === 'site' && n.data.status === 'disrupted') mark(d.status, n.id, 'disrupted')
   for (const inc of summary?.incidents ?? []) for (const s of inc.sites) mark(d.status, s, 'disrupted')
 
-  const orderInfo = new Map<string, { customer: string; product: string; plant: string; status: string }>()
-  const trace = [...steps].reverse().find((s) => s.tool === 'trace_exposure' && s.ui)?.ui
+  d.resolve = lastUi(steps, 'resolve_entities')
+  d.declared = lastUi(steps, 'declare_incident')
+  const trace = lastUi(steps, 'trace_exposure')
   if (trace) {
     d.tier1View = trace.tier1_view?.directly_affected_tier1 ?? null
-    d.exposedTier1 = (trace.multi_tier?.tier1_sites ?? []).map((t: any) => t.site)
+    d.exposedTier1 = trace.multi_tier?.tier1_sites ?? []
     d.exposedOrders = trace.multi_tier?.exposed_orders ?? null
+    d.shared = trace.shared_upstream ?? []
     d.hop = trace.hop_depth ?? {}
     const origins = new Set<string>(), comps = new Set<string>(), prods = new Set<string>(), plants = new Set<string>()
     for (const ev of trace.evidence ?? []) {
-      d.evidence[ev.id] = ev.path
+      d.evidence.push({ id: ev.id, path: ev.path, component: ev.component, product: ev.product, plant: ev.plant, orders: ev.orders.length })
       origins.add(ev.origin); comps.add(ev.component); prods.add(ev.product); plants.add(ev.plant)
-      for (const id of ev.path) if (d.status[id] !== 'disrupted') mark(d.status, id, 'covered')
+      for (const id of ev.path) mark(d.status, id, 'covered')
       mark(d.status, ev.product, 'covered')
       for (let i = 0; i + 1 < ev.path.length; i++) {
-        const [a, b] = [ev.path[i], ev.path[i + 1]]
-        for (const e of graph.edges) {
-          if (e.source === a && e.target === b) mark(d.hotEdges, e.id, 'covered')
-        }
+        for (const e of graph.edges) if (e.source === ev.path[i] && e.target === ev.path[i + 1]) mark(d.hotEdges, e.id, 'covered')
       }
       for (const e of graph.edges) if (e.kind === 'builds' && e.source === ev.plant && e.target === ev.product) mark(d.hotEdges, e.id, 'covered')
     }
     d.origins = [...origins]; d.components = [...comps]; d.products = [...prods]; d.plants = [...plants]
   }
 
-  const short = [...steps].reverse().find((s) => s.tool === 'project_shortages' && s.ui)?.ui
-  if (short) {
+  const orderInfo = new Map<string, any>()
+  d.shortage = lastUi(steps, 'project_shortages')
+  if (d.shortage) {
     let late = 0
     const customers = new Set<string>()
-    for (const o of short.orders ?? []) {
+    for (const o of d.shortage.orders ?? []) {
       orderInfo.set(o.order_id, o)
       if (o.status === 'projected_late') {
         late++
@@ -134,12 +156,10 @@ export function derive(graph: WorldGraph | null, summary: Summary | null, steps:
     d.lateOrders = late
     d.customersHit = customers.size
     for (const e of graph.edges) {
-      if (e.kind === 'demand') {
-        const ids = (e.data.order_ids as string[]) ?? []
-        const states = ids.map((id) => orderInfo.get(id)?.status)
-        if (states.includes('projected_late')) mark(d.hotEdges, e.id, 'late')
-        else if (states.includes('exposed_covered')) mark(d.hotEdges, e.id, 'covered')
-      }
+      if (e.kind !== 'demand') continue
+      const states = ((e.data.order_ids as string[]) ?? []).map((id) => orderInfo.get(id)?.status)
+      if (states.includes('projected_late')) mark(d.hotEdges, e.id, 'late')
+      else if (states.includes('exposed_covered')) mark(d.hotEdges, e.id, 'covered')
     }
   }
 
@@ -147,63 +167,118 @@ export function derive(graph: WorldGraph | null, summary: Summary | null, steps:
     if (s.tool === 'compute_true_capacity' && s.ui) {
       const key = `${s.ui.component}@${s.ui.plant}`
       d.capacity = d.capacity.filter((c) => `${c.component}@${c.plant}` !== key)
-      d.capacity.push({ component: s.ui.component, plant: s.ui.plant, naive: s.ui.naive_wk, trueWk: s.ui.true_wk })
+      d.capacity.push({ component: s.ui.component, plant: s.ui.plant, naive: s.ui.naive_wk, trueWk: s.ui.true_wk,
+        healthy: s.ui.nominal_wk, bottleneck: s.ui.bottleneck ?? [] })
+    }
+    if (s.tool === 'find_alternatives' && s.ui) {
+      d.alternatives = d.alternatives.filter((a) => !(a.component === s.ui.component && a.plant === s.ui.plant))
+      d.alternatives.push(s.ui)
     }
   }
+  d.sim = lastUi(steps, 'simulate_strategies')
   const proposed = [...events].reverse().find((e) => e.type === 'plan.proposed')
-  if (proposed) d.spendCents = proposed.data.spend_cents
-  const executed = events.find((e) => e.type === 'action.executed')
+  if (proposed) {
+    d.plan = { ...proposed.data, ...(lastUi(steps, 'submit_plan_for_approval')?.plan ?? {}) }
+    d.spendCents = proposed.data.spend_cents
+  }
+  const executed = [...events].reverse().find((e) => e.type === 'action.executed')
   if (executed) {
-    for (const oid of executed.data.receipt?.orders_protected ?? []) {
+    d.receipt = executed.data.receipt
+    for (const oid of d.receipt?.orders_protected ?? []) {
       const o = orderInfo.get(oid)
-      if (o) { d.status[o.customer] = d.status[o.customer] === 'late' ? 'protected' : d.status[o.customer] }
+      if (o) d.status[o.customer] = 'protected'
+    }
+    const planEdges = (d.plan?.pos ?? []) as any[]
+    for (const po of planEdges) {
+      for (const e of graph.edges) {
+        if (e.source === po.site_id && e.target === po.plant_id && e.kind === 'can_supply') d.hotEdges[e.id] = 'protected'
+      }
+      d.status[po.site_id] = d.status[po.site_id] === 'covered' || !d.status[po.site_id] ? 'protected' : d.status[po.site_id]
     }
   }
+  d.verify = lastUi(steps, 'verify_execution')
+  d.report = [...events].reverse().find((e) => e.type === 'run.completed')?.data.report ?? lastUi(steps, 'submit_incident_report')?.report ?? null
   return d
+}
+
+/** The step the agent is on right now. */
+export function currentStep(st: Pick<State, 'steps' | 'runStatus' | 'events'>): StepId | null {
+  if (st.runStatus === 'awaiting_approval' || st.runStatus === 'approving') return 'approve'
+  const last = st.steps[st.steps.length - 1]
+  if (!last) return st.events.some((e) => e.type === 'run.started') ? 'detect' : null
+  return last.stepId
+}
+export function reachedSteps(steps: Step[], runStatus: RunStatus): Set<StepId> {
+  const r = new Set<StepId>(steps.map((s) => s.stepId))
+  if (runStatus === 'awaiting_approval' || runStatus === 'approving') r.add('approve')
+  return r
 }
 
 function applyEvent(state: State, ev: RunEvent): Partial<State> {
   const events = [...state.events, ev]
   let steps = state.steps
-  let { runStatus, pendingDecision, notes } = state
+  let { runStatus, pendingDecision } = state
   if (ev.type === 'tool.called') {
-    steps = [...steps, { step: ev.data.step, tool: ev.data.tool, phase: PHASE_OF[ev.data.tool] ?? 'INVESTIGATE',
-      args: ev.data.args ?? {}, state: 'running' }]
+    steps = [...steps, { step: ev.data.step, tool: ev.data.tool, stepId: STEP_OF[ev.data.tool] ?? 'trace', args: ev.data.args ?? {}, state: 'running' }]
   } else if (ev.type === 'tool.result') {
     const i = steps.map((s) => s.tool === ev.data.tool && s.state === 'running').lastIndexOf(true)
     if (i >= 0) {
       steps = steps.slice()
-      steps[i] = { ...steps[i], state: ev.data.is_error ? 'error' : 'ok', ref: ev.data.result_ref, ms: ev.data.duration_ms,
-        summary: ev.data.summary, ui: ev.data.ui }
+      steps[i] = { ...steps[i], state: ev.data.is_error ? 'error' : 'ok', ref: ev.data.result_ref, ms: ev.data.duration_ms, summary: ev.data.summary, ui: ev.data.ui }
     }
   } else if (ev.type === 'approval.required') {
     runStatus = 'awaiting_approval'; pendingDecision = ev.data.decision_id
-  } else if (ev.type === 'action.executed' || ev.type === 'plan.rejected') {
+  } else if (ev.type === 'action.executed' || ev.type === 'plan.rejected' || ev.type === 'approval.failed') {
     runStatus = 'running'; pendingDecision = null
   } else if (ev.type === 'run.completed') {
     runStatus = 'completed'
   } else if (ev.type === 'run.error') {
     runStatus = 'failed'
-  } else if (ev.type === 'agent.note') {
-    notes = [...notes, ev.data.text]
   }
-  return { events, steps, runStatus, pendingDecision, notes, derived: derive(state.graph, state.summary, steps, events) }
+  return { events, steps, runStatus, pendingDecision, derived: derive(state.graph, state.summary, steps, events) }
+}
+
+/** Side effects with a job: a toast when something new happened, a wipe when a human commitment executes. */
+function announce(ev: RunEvent) {
+  const toast = useToasts.getState().push
+  if (ev.type === 'tool.result' && !ev.data.is_error) {
+    const ui = ev.data.ui
+    if (ev.data.tool === 'declare_incident' && ui) toast(`${ui.incident_id} declared · ${ui.site_ids?.length} site(s) down`)
+    if (ev.data.tool === 'trace_exposure' && ui) toast(`Tier-1 view: ${ui.tier1_view?.directly_affected_tier1} · graph: ${ui.multi_tier?.exposed_tier1} exposed tier-1`)
+  }
+  if (ev.type === 'approval.required') toast(`Plan ${ev.data.decision_id} needs your approval`)
+  if (ev.type === 'action.executed') {
+    useWipe.getState().play('06', 'Executing the plan')
+    toast(ev.data.receipt?.summary ?? 'Plan executed')
+  }
+  if (ev.type === 'run.completed') toast('Run complete · report validated')
+  if (ev.type === 'run.error') toast(`Run stopped: ${String(ev.data.error).slice(0, 80)}`)
 }
 
 let unsubscribe: (() => void) | null = null
-const REFRESH_ON = new Set(['declare_incident', 'flag_orders_at_risk'])
+const REFRESH_ON = new Set(['declare_incident', 'flag_orders_at_risk', 'verify_execution'])
+
+function initialTheme(): 'light' | 'dark' {
+  try {
+    const t = localStorage.getItem('domino-theme')
+    if (t === 'light' || t === 'dark') return t
+  } catch {
+    /* storage unavailable */
+  }
+  return 'light'
+}
 
 export const useStore = create<State>((set, get) => ({
-  graph: null, summary: null, scenarios: [], places: null, scenario: 'monsoon', dryRun: true,
-  runId: null, runStatus: 'idle', events: [], steps: [], notes: [], pendingDecision: null, error: null, busy: false,
-  derived: EMPTY,
+  graph: null, summary: null, scenarios: [], places: null, scenario: 'monsoon', dryRun: true, theme: initialTheme(),
+  runId: null, runStatus: 'idle', events: [], steps: [], pendingDecision: null, selected: null, hoverEvidence: null,
+  error: null, busy: false, ready: false, derived: EMPTY,
 
   load: async () => {
     try {
       const [graph, summary, scenarios, places] = await Promise.all([api.graph(), api.summary(), api.scenarios(), api.places()])
-      set({ graph, summary, scenarios, places, error: null, derived: derive(graph, summary, get().steps, get().events) })
+      set({ graph, summary, scenarios, places, error: null, ready: true, derived: derive(graph, summary, get().steps, get().events) })
     } catch (e) {
-      set({ error: `Could not load the world. ${String((e as Error).message ?? e)}` })
+      set({ ready: true, error: `Could not load the world. ${String((e as Error).message ?? e)}` })
     }
   },
   refresh: async () => {
@@ -212,10 +287,17 @@ export const useStore = create<State>((set, get) => ({
   },
   setScenario: (scenario) => set({ scenario }),
   setDryRun: (dryRun) => set({ dryRun }),
+  setTheme: (theme) => {
+    try { localStorage.setItem('domino-theme', theme) } catch { /* storage unavailable */ }
+    document.documentElement.dataset.theme = theme
+    set({ theme })
+  },
+  select: (selected) => set({ selected }),
+  setHoverEvidence: (hoverEvidence) => set({ hoverEvidence }),
 
   run: async () => {
     unsubscribe?.()
-    set({ busy: true, error: null, events: [], steps: [], notes: [], pendingDecision: null, runStatus: 'running' })
+    set({ busy: true, error: null, events: [], steps: [], pendingDecision: null, runStatus: 'running', selected: null })
     try {
       await api.reset()
       await get().refresh()
@@ -223,7 +305,8 @@ export const useStore = create<State>((set, get) => ({
       set({ runId: run_id, busy: false })
       unsubscribe = subscribe(run_id, (ev) => {
         set((s) => applyEvent(s, ev))
-        if (ev.type === 'tool.result' && (REFRESH_ON.has(ev.data.tool) || ev.data.tool === 'verify_execution')) void get().refresh()
+        announce(ev)
+        if (ev.type === 'tool.result' && REFRESH_ON.has(ev.data.tool)) void get().refresh()
         if (ev.type === 'action.executed' || ev.type === 'run.completed') void get().refresh()
       })
     } catch (e) {
@@ -234,7 +317,11 @@ export const useStore = create<State>((set, get) => ({
     const { runId, pendingDecision } = get()
     if (!runId || !pendingDecision) return
     set({ runStatus: 'approving' })
-    try { await api.approve(runId, pendingDecision) } catch (e) { set({ error: String((e as Error).message ?? e), runStatus: 'awaiting_approval' }) }
+    try {
+      await api.approve(runId, pendingDecision)
+    } catch (e) {
+      set({ error: String((e as Error).message ?? e), runStatus: 'awaiting_approval' })
+    }
   },
   reject: async (feedback) => {
     const { runId } = get()
@@ -243,16 +330,25 @@ export const useStore = create<State>((set, get) => ({
   },
   reset: async () => {
     unsubscribe?.()
-    set({ busy: true, runId: null, runStatus: 'idle', events: [], steps: [], notes: [], pendingDecision: null })
-    try { await api.reset(); await get().refresh() } finally { set({ busy: false }) }
+    set({ busy: true, runId: null, runStatus: 'idle', events: [], steps: [], pendingDecision: null, selected: null })
+    try {
+      await api.reset()
+      await get().refresh()
+      useToasts.getState().push('World reset from pristine')
+    } finally {
+      set({ busy: false })
+    }
   },
   inject: async (entityId, label) => {
     set({ busy: true, error: null })
     try {
-      await api.inject({ entity_ids: [entityId], kind: 'disruption', title: `Manual: ${label}`, capacity_factor: 0, duration_days: 21 })
+      const r = await api.inject({ entity_ids: [entityId], kind: 'disruption', title: `Manual: ${label}`, capacity_factor: 0, duration_days: 21 })
       await get().refresh()
+      useToasts.getState().push(`${r.incident_id} injected · ${r.site_ids.length} site(s) at 0% for 21 days`)
     } catch (e) {
       set({ error: String((e as Error).message ?? e) })
-    } finally { set({ busy: false }) }
+    } finally {
+      set({ busy: false })
+    }
   },
 }))
