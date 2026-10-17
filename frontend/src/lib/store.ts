@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { api } from './api'
-import { useToasts } from './motion'
+import { useToasts } from './toasts'
 import { subscribe } from './sse'
 import type { NodeStatus, Places, RunEvent, RunStatus, Scenario, Summary, WorldGraph } from './types'
 
