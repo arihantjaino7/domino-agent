@@ -13,7 +13,7 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
 from mcp.client.client import Client
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
 
 from domino.agent import external
@@ -53,17 +53,17 @@ def _check_live_quota(ip: str) -> None:
 class StartRun(BaseModel):
     scenario: str | None = None
     alert_text: str | None = None
-    budget_usd: int | None = None
+    budget_usd: int | None = Field(None, ge=1, le=10_000_000)
     dry_run: bool = False
 
 
 class Approval(BaseModel):
-    approver: str = "web"
+    approver: str = Field("web", max_length=80)
     decision_id: str | None = None
 
 
 class Rejection(BaseModel):
-    feedback: str
+    feedback: str = Field(min_length=1, max_length=1000)  # it goes to the model as data, and onto the Decision
     decision_id: str | None = None
 
 

@@ -227,7 +227,7 @@ export function AgentView() {
                   </div>
                   {rejecting && (
                     <div style={{ marginTop: 10, display: 'grid', gap: 8 }}>
-                      <textarea className="pick" style={{ borderRadius: 12, height: 70, padding: 10, backgroundImage: 'none' }} placeholder="Tell DOMINO what to change, for example: keep spend under $100,000" value={feedback} onChange={(e) => setFeedback(e.target.value)} />
+                      <textarea className="pick" style={{ borderRadius: 12, height: 70, padding: 10, backgroundImage: 'none' }} placeholder="Tell DOMINO what to change, for example: keep spend under $100,000" maxLength={1000} value={feedback} onChange={(e) => setFeedback(e.target.value)} />
                       <button type="button" className="btn btn-ghost" disabled={!feedback.trim()} onClick={() => { void st.reject(feedback.trim()); setRejecting(false); setFeedback('') }}>Send feedback and re-plan</button>
                     </div>
                   )}

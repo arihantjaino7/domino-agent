@@ -96,9 +96,9 @@ async def places() -> dict[str, Any]:
 
 
 class Inject(BaseModel):
-    entity_ids: list[str] = Field(min_length=1)
-    kind: str = "disruption"
-    title: str = "Manual disruption"
+    entity_ids: list[str] = Field(min_length=1, max_length=20)
+    kind: str = Field("disruption", max_length=40)
+    title: str = Field("Manual disruption", max_length=200)  # unauthenticated endpoint: keep stored text short
     capacity_factor: float = Field(0.0, ge=0, lt=1)
     duration_days: int = Field(14, ge=1, le=120)
 
