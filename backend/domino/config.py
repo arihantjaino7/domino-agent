@@ -25,6 +25,11 @@ class Settings(BaseSettings):
 
     mcp_api_key: str = ""
     live_runs_per_hour_per_ip: int = 5
+    live_runs_per_day: int = 40  # global daily cap on real (paid) agent runs
+
+    # Deployment
+    domino_public_host: str = ""  # e.g. 203-0-113-7.sslip.io; added to the MCP allowed Host headers
+    domino_static_dir: str = ""   # built frontend (frontend/dist); served at / when set
 
 
 settings = Settings()

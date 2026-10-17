@@ -1,6 +1,6 @@
 # Overnight status and morning handover (Oct 16 → 17)
 
-**State: M2-M5 done and verified. M6 is built and tested with a free scripted model; the real Claude run is NOT tried yet (it costs API credit). All committed and pushed.**
+**State: M2-M5 done and verified. M6 built and tested with a free scripted model (the real Claude run is NOT tried yet). M7 deploy files built and tested locally, NOT deployed. All committed and pushed.**
 
 ## Commits
 - `04d9bf1` M2: world generator, loader and schema
@@ -123,5 +123,19 @@ KantoC:in  --600--> KantoC:out  --600--> KantoP:in --600--> KantoP:out --300--> 
 2. The agent cites `R-04.totals.projected_late` instead of writing "13 orders". What does the server do with that reference, and why does it matter for judges?
 3. For the Antwerp alert, why must the answer be "not in the graph" and not "no impact"?
 
+## M7 (deploy skeleton, NOT deployed)
+- `Dockerfile` (one image: built frontend + FastAPI + MCP), `docker-compose.prod.yml` (FalkorDB without public ports, app, Caddy with auto HTTPS), `Caddyfile` (SSE unbuffered), and **`docs/DEPLOY.md` with the exact VPS commands**.
+- Tested locally with the production files: health and frontend through Caddy, **SSE events arrived live through Caddy** (stream open, run paused at approval), and the world was seeded on first start.
+- Public-demo protections: live agent runs capped per visitor per hour and per day, `/mcp` locked by `MCP_API_KEY`, public host allowed in MCP's Host check.
+- `make test`: **73 passed** (2 new: MCP key, live-run quota).
+- I did not deploy. You need a VPS: follow `docs/DEPLOY.md`, about 15 minutes.
+
+### M7 learning questions
+1. Why does Caddy need `flush_interval -1`, and what would the UI look like without it?
+2. Why is FalkorDB not published on any port in production?
+3. A judge opens the public URL and clicks "run" 10 times. What stops that from draining your API credit?
+
 ## Next step (when you're back)
-- Run the real model once (`make demo-headless SCENARIO=monsoon`) and check the cost and the report. Then M7: deploy the skeleton.
+- Run the real model once (`make demo-headless SCENARIO=monsoon`) and check the cost and the report.
+- Deploy with `docs/DEPLOY.md` when you have the VPS.
+- Then M8: the war-room UI (needs your eyes after each of its 3 steps).

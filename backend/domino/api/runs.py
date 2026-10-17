@@ -7,6 +7,8 @@ The agent reaches its tools through the same MCP server that is mounted at /mcp 
 from __future__ import annotations
 
 import asyncio
+import time
+from collections import deque
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
@@ -26,6 +28,25 @@ RUNS: dict[str, AgentRun] = {}
 CLIENTS: dict[str, Any] = {}
 _signals: dict[str, asyncio.Event] = {}
 _tasks: set[asyncio.Task] = set()
+_live_by_ip: dict[str, deque[float]] = {}
+_live_all: deque[float] = deque()
+
+
+def _check_live_quota(ip: str) -> None:
+    """Real agent runs cost API credit: cap them per IP per hour and globally per day (PLAN §14.4)."""
+    now = time.time()
+    mine = _live_by_ip.setdefault(ip, deque())
+    while mine and now - mine[0] > 3600:
+        mine.popleft()
+    while _live_all and now - _live_all[0] > 86400:
+        _live_all.popleft()
+    if len(mine) >= settings.live_runs_per_hour_per_ip:
+        raise HTTPException(429, f"live run limit: {settings.live_runs_per_hour_per_ip} per hour per visitor; "
+                                 "try again later or use dry_run")
+    if len(_live_all) >= settings.live_runs_per_day:
+        raise HTTPException(429, "the demo's daily live-run budget is used up; use dry_run")
+    mine.append(now)
+    _live_all.append(now)
 
 
 class StartRun(BaseModel):
@@ -87,12 +108,16 @@ async def world_reset() -> dict:
 
 
 @router.post("/runs")
-async def start_run(body: StartRun) -> dict:
+async def start_run(body: StartRun, request: Request) -> dict:
     scenario = body.scenario or "custom"
     alert = body.alert_text or (SCENARIOS[scenario]["alert"] if scenario in SCENARIOS else None)
     if not alert:
         raise HTTPException(400, "give a known scenario or alert_text")
+    if body.alert_text and len(body.alert_text) > 2000:
+        raise HTTPException(400, "alert_text is limited to 2000 characters")
     client = _client(scenario, body.dry_run)
+    if not body.dry_run:
+        _check_live_quota(request.client.host if request.client else "unknown")
     run = new_run(scenario, alert, settings.world_graph_live, budget_cents=(body.budget_usd or 0) * 100 or None)
     RUNS[run.id], CLIENTS[run.id] = run, client
     signal = _signals[run.id] = asyncio.Event()

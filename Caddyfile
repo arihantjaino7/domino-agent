@@ -1,0 +1,8 @@
+# DOMINO behind Caddy: automatic HTTPS for DOMINO_DOMAIN (e.g. 203-0-113-7.sslip.io).
+# flush_interval -1 streams every SSE event immediately (no proxy buffering).
+{$DOMINO_DOMAIN} {
+	reverse_proxy app:8000 {
+		flush_interval -1
+	}
+	header -Server
+}
