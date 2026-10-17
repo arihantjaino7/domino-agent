@@ -63,6 +63,7 @@ export interface Derived {
   sim: any | null
   plan: any | null
   receipt: any | null
+  execFailed: any | null  // the executor's receipt when an approved plan was not committed
   verify: any | null
   report: any | null
   spendCents: number | null
@@ -115,7 +116,7 @@ interface State {
 const EMPTY: Derived = {
   status: {}, hop: {}, evidence: [], hotEdges: {}, tier1View: null, exposedTier1: [], shared: [], origins: [],
   components: [], products: [], plants: [], exposedOrders: null, lateOrders: null, customersHit: null, capacity: [],
-  alternatives: [], resolve: null, declared: null, shortage: null, sim: null, plan: null, receipt: null, verify: null,
+  alternatives: [], resolve: null, declared: null, shortage: null, sim: null, plan: null, receipt: null, execFailed: null, verify: null,
   report: null, spendCents: null, trace: null, alert: null, kind: null, lessons: [], memoryGraph: null, executedSeq: null,
 }
 
@@ -204,7 +205,10 @@ export function derive(graph: WorldGraph | null, summary: Summary | null, steps:
     d.plan = { ...proposed.data, ...(lastUi(steps, 'submit_plan_for_approval')?.plan ?? {}) }
     d.spendCents = proposed.data.spend_cents
   }
-  const executed = [...events].reverse().find((e) => e.type === 'action.executed')
+  const last = [...events].reverse().find((e) => e.type === 'action.executed')
+  // An approval the executor's checks stopped (e.g. preflight) bought nothing: never show it as done.
+  const executed = last?.data.receipt?.outcome === 'executed' ? last : undefined
+  if (last && !executed) d.execFailed = last.data.receipt
   if (executed) {
     d.executedSeq = executed.seq
     d.receipt = executed.data.receipt
@@ -273,7 +277,10 @@ function announce(ev: RunEvent) {
     if (ev.data.tool === 'trace_exposure' && ui) toast(`A tier-1 view sees ${ui.tier1_view?.directly_affected_tier1} problems. DOMINO found ${ui.multi_tier?.exposed_tier1} suppliers in trouble.`)
   }
   if (ev.type === 'approval.required') toast('A rescue plan is ready. It needs your OK.')
-  if (ev.type === 'action.executed') toast(ev.data.receipt?.summary ?? 'Plan executed')
+  if (ev.type === 'action.executed') {
+    const r = ev.data.receipt
+    toast(r?.outcome === 'executed' ? r.summary : `The executor stopped the plan (${r?.outcome ?? 'unknown'}). Nothing was bought.`)
+  }
   if (ev.type === 'run.completed') toast('Run complete. The report was checked against the graph.')
   if (ev.type === 'run.error') toast(`Run stopped: ${String(ev.data.error).slice(0, 80)}`)
 }

@@ -213,6 +213,7 @@ export function AgentView() {
               ) : (
                 <>
                   <div className="side-h"><h2>Approve the rescue plan</h2><span className="tag"><i className="dot st-covered pulse" />{m.phase === 'approving' ? 'placing orders' : 'needs you'}</span></div>
+                  {m.d.execFailed && <p className="plain">The executor's checks stopped the approved plan ({m.d.execFailed.outcome}). Nothing was bought.</p>}
                   <p className="plain">Buy {m.part[1]} from {plural(m.suppliersInPlan.length, 'other supplier')} so {plural(rec.protected_projected, 'late order')} can still ship.</p>
                   <div className="appr-v">
                     <div><span className="sub">Cost</span><b>{usd(pl.spend_cents)}</b><div className="budget"><i style={{ width: `${m.sim?.budget_cents ? (pl.spend_cents / m.sim.budget_cents) * 100 : 0}%` }} /></div><span className="sub">of {usd(m.sim?.budget_cents)} budget</span></div>
