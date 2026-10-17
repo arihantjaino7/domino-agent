@@ -1,5 +1,7 @@
 # Overnight status and morning handover (Oct 16 → 17)
 
+> **Historical snapshot.** This file records the state at the time in its title and is kept for the work history. For the current state, see the [README](../README.md) and [DECISIONS.md](DECISIONS.md).
+
 **State: M2-M5 done and verified. M6 built and tested with a free scripted model (the real Claude run is NOT tried yet). M7 deploy files built and tested locally, NOT deployed. M8 step 1 (war-room screen) built and checked in a browser. All committed and pushed.**
 
 ## Commits

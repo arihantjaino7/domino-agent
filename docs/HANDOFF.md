@@ -1,5 +1,7 @@
 # DOMINO handoff (Oct 17, evening)
 
+> **Historical snapshot.** This file records the state at the time in its title and is kept for the work history. For the current state, see the [README](../README.md) and [DECISIONS.md](DECISIONS.md).
+
 Deadline: **Oct 18, 23:59 IST. Submit by 21:00 IST.** Track 1 only: *Agents That Act on Connected Data*.
 Repo: `C:\dev\domino`, branch `main`. Last commit `2524fb6` (M8 final UI), **not pushed yet** (`git push` when you are ready).
 
