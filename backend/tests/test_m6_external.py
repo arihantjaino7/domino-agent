@@ -96,3 +96,18 @@ def test_external_rejection_is_reported_to_the_agent(world, monkeypatch):
         assert status["status"] == "rejected" and status["feedback"] == "too expensive"
         assert get_context("external").pending is None
         assert not run_query("upstream/purchase_orders", graph=LIVE)
+
+
+def test_declaring_the_same_disruption_twice_records_it_once(world, monkeypatch):
+    monkeypatch.setattr(settings, "world_graph_pristine", PRISTINE)
+    monkeypatch.setattr(settings, "world_graph_live", LIVE)
+    from domino.api.main import app
+
+    with TestClient(app) as http:
+        http.post("/api/external/watch")
+        args = {"entity_ids": ["Z-CPB"], "kind": "flood", "title": "Monsoon", "duration_days": 28}
+        (e1, first), (e2, second) = asyncio.run(_calls(("declare_incident", args), ("declare_incident", args)))
+        assert not e1 and not e2
+        assert first["incident_id"] == second["incident_id"] == "INC-0001"
+        assert second["already_declared"] is True and "already_declared" not in first
+        assert run_query("agent/next_incident_id", graph=LIVE)[0]["n"] == 1

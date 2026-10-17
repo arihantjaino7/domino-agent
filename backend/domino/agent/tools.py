@@ -22,6 +22,7 @@ from domino.engines.capacity import compute_true_capacity as _true_capacity
 from domino.engines.executor import propose_decision
 from domino.engines.exposure import trace_exposure as _trace_exposure
 from domino.engines.incident import declare_incident as _declare
+from domino.engines.incident import expand_sites
 from domino.engines.sandbox import simulate_strategies as _simulate
 from domino.engines.shortage import project_shortages as _project
 from domino.engines.verifier import verify_execution as _verify
@@ -96,6 +97,20 @@ def declare_incident(ctx: RunContext, entity_ids: list[str], kind: str, title: s
         raise ToolInputError("capacity_factor must be in [0, 1): 0 = fully down, 0.5 = half capacity")
     if not 1 <= duration_days <= 120:
         raise ToolInputError("duration_days must be between 1 and 120")
+    expanded = expand_sites(ctx.graph, entity_ids)
+    if expanded["outcome"] == "ok" and expanded["site_ids"]:
+        covering = [r for r in run_query("incident/open_covering", {"site_ids": expanded["site_ids"]}, graph=ctx.graph)
+                    if set(expanded["site_ids"]) <= set(r["sites"])]
+        if covering:  # the same disruption is recorded once; return the existing incident
+            ex = covering[0]
+            ctx.incident_id = ex["incident"]
+            summary = {"incident_id": ex["incident"], "sites_affected": expanded["site_ids"],
+                       "disrupted_until_day": ex["end_day"], "capacity_factor": capacity_factor,
+                       "already_declared": True,
+                       "note": f"{ex['incident']} already covers these sites; nothing was written. Continue with it."}
+            ctx.add_result("declare_incident", summary, {"incident_id": ex["incident"], "site_ids": expanded["site_ids"],
+                                                         "end_day": ex["end_day"], "already_declared": True})
+            return summary
     n = run_query("agent/next_incident_id", graph=ctx.graph)[0]["n"]
     incident_id = f"INC-{n + 1:04d}"
     res = _declare(ctx.graph, incident_id=incident_id, kind=kind, title=title, alert_text=ctx.alert_text,
