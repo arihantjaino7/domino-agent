@@ -1,4 +1,4 @@
-import type { Memory, Places, Recording, ReplayMeta, Scenario, Summary, WorldGraph } from './types'
+import type { Memory, Places, Recording, ReplayMeta, RunEvent, Scenario, Summary, WorldGraph } from './types'
 
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, {
@@ -34,6 +34,7 @@ export const api = {
     req<{ run_id: string }>('/api/runs', { method: 'POST', body: JSON.stringify(body) }),
   approve: (runId: string, decisionId: string) =>
     req(`/api/runs/${runId}/approve`, { method: 'POST', body: JSON.stringify({ approver: 'war-room', decision_id: decisionId }) }),
+  deliver: (runId: string) => req<{ run_id: string; event: RunEvent }>(`/api/runs/${runId}/deliver`, { method: 'POST' }),
   reject: (runId: string, feedback: string, decisionId?: string | null) =>
     req(`/api/runs/${runId}/reject`, { method: 'POST', body: JSON.stringify({ feedback, decision_id: decisionId ?? undefined }) }),
 }

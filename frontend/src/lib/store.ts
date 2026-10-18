@@ -73,6 +73,7 @@ export interface Derived {
   lessons: { text: string }[]
   memoryGraph: string | null
   executedSeq: number | null
+  delivery: any | null // fast-forward result: how each PO arrived and which orders were fulfilled
 }
 
 interface State {
@@ -113,6 +114,7 @@ interface State {
   setReplay: (id: string) => void
   approve: () => Promise<void>
   reject: (feedback: string) => Promise<void>
+  deliver: () => Promise<void>
   reset: () => Promise<void>
   inject: (entityId: string, label: string) => Promise<void>
 }
@@ -122,6 +124,7 @@ const EMPTY: Derived = {
   components: [], products: [], plants: [], exposedOrders: null, lateOrders: null, customersHit: null, capacity: [],
   alternatives: [], resolve: null, declared: null, shortage: null, sim: null, plan: null, receipt: null, execFailed: null, verify: null,
   report: null, spendCents: null, trace: null, alert: null, kind: null, lessons: [], memoryGraph: null, executedSeq: null,
+  delivery: null,
 }
 
 const RANK: Record<NodeStatus, number> = { none: 0, protected: 1, covered: 2, late: 3, disrupted: 4 }
@@ -229,6 +232,7 @@ export function derive(graph: WorldGraph | null, summary: Summary | null, steps:
     }
   }
   d.verify = lastUi(steps, 'verify_execution')
+  d.delivery = [...events].reverse().find((e) => e.type === 'delivery.completed')?.data ?? null
   d.report = [...events].reverse().find((e) => e.type === 'run.completed')?.data.report ?? lastUi(steps, 'submit_incident_report')?.report ?? null
   return d
 }
@@ -247,6 +251,7 @@ export function reachedSteps(steps: Step[], runStatus: RunStatus): Set<StepId> {
 }
 
 function applyEvent(state: State, ev: RunEvent): Partial<State> {
+  if (state.events.some((e) => e.seq === ev.seq)) return {} // the deliver call returns its event and the stream may send it too
   const events = [...state.events, ev]
   let steps = state.steps
   let { runStatus, pendingDecision } = state
@@ -286,6 +291,10 @@ function announce(ev: RunEvent) {
     toast(r?.outcome === 'executed' ? r.summary : `The executor stopped the plan (${r?.outcome ?? 'unknown'}). Nothing was bought.`)
   }
   if (ev.type === 'run.completed') toast('Run complete. The report was checked against the graph.')
+  if (ev.type === 'delivery.completed') {
+    const c = ev.data.counts ?? {}
+    toast(`Day ${ev.data.day}: ${c.fulfilled ?? 0} orders fulfilled on time, ${c.fulfilled_late ?? 0} late. DOMINO remembered how each supplier did.`)
+  }
   if (ev.type === 'run.error') toast(`Run stopped: ${String(ev.data.error).slice(0, 80)}`)
 }
 
@@ -450,6 +459,21 @@ export const useStore = create<State>((set, get) => ({
     const { runId, pendingDecision } = get()
     if (!runId) return
     try { await api.reject(runId, feedback, pendingDecision) } catch (e) { set({ error: String((e as Error).message ?? e) }) }
+  },
+  deliver: async () => {
+    const { runId, mode } = get()
+    if (!runId || mode === 'replay') return
+    set({ busy: true, error: null })
+    try {
+      const { event } = await api.deliver(runId)
+      set((s) => applyEvent(s, event))
+      announce(event)
+      await get().refresh()
+    } catch (e) {
+      set({ error: String((e as Error).message ?? e) })
+    } finally {
+      set({ busy: false })
+    }
   },
   reset: async () => {
     unsubscribe?.()

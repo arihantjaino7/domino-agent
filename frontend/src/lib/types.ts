@@ -79,6 +79,20 @@ export interface Memory {
   incidents: { id: string; incident_id?: string; title: string; learned_on: string; outcome: string; entities: MemoryEntity[] }[]
   lessons: { id: string; text: string; learned_on: string; incident_id: string; evidence: string[]; entities: MemoryEntity[] }[]
   counts: { incidents: number; lessons: number }
+  /** supplier reliability learned from how past purchase orders were delivered */
+  reliability: LearnedReliability[]
+}
+
+export interface LearnedReliability {
+  site: string
+  name: string
+  seeded: number
+  learned: number
+  deliveries: number
+  on_time: number
+  learned_on: string
+  evidence: { po_id: string; days_late: number; learned_on: string; run_id: string }[]
+  text: string
 }
 
 export interface ReplayMeta {

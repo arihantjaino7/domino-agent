@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { fmt, usd, useModel, type Model } from '../lib/model'
+import { fmt, lateWords, usd, useModel, type Model } from '../lib/model'
 import { Head } from './Controls'
+import { FastForward, LearnedList } from './Delivery'
 import { GEO, PLANT_GEO } from '../lib/geo'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -106,13 +107,31 @@ function Gantt({ m, pick, setPick }: { m: Model; pick: number; setPick: (i: numb
             {X(lead) - X(0) > 70 && <text x={X(0) + 6} y={y + 18} fontSize={10} fill="#bdbab3">making {lead}d</text>}
             <rect className="grow" style={{ animationDelay: `${i * 120 + 300}ms`, fill: 'var(--st-protected)' }} x={X(lead)} y={y + 6} width={Math.max(0, X(po.first_arrival_day) - X(lead))} height={16} rx={5} fillOpacity={m.executed ? 0.55 : 0.25} />
             {X(po.first_arrival_day) - X(lead) > 70 && <text x={X(lead) + 6} y={y + 18} fontSize={10} fill="#edebe6">shipping</text>}
-            <text x={X(po.first_arrival_day) + 8} y={y + 18} fontSize={10.5} fill="#edebe6">arrives day {po.first_arrival_day}</text>
+            {(() => {
+              const out = m.poOutcome(po.id)
+              if (!out) return <text x={X(po.first_arrival_day) + 8} y={y + 18} fontSize={10.5} fill="#edebe6">arrives day {po.first_arrival_day}</text>
+              const at = Math.min(H, out.arrived_day)
+              return (
+                <>
+                  {out.days_late > 0 && <rect className="grow" style={{ fill: 'var(--st-late)' }} x={X(po.first_arrival_day)} y={y + 6} width={Math.max(0, X(at) - X(po.first_arrival_day))} height={16} rx={5} fillOpacity={0.55}><title>{`${lateWords(out.days_late)}: planned day ${po.first_arrival_day}, arrived day ${out.arrived_day}`}</title></rect>}
+                  <text x={X(at) + 8} y={y + 18} fontSize={10.5} fill="#edebe6">{out.days_late > 0 ? `arrived day ${out.arrived_day}, ${lateWords(out.days_late)}` : `arrived day ${out.arrived_day}, on time`}</text>
+                </>
+              )
+            })()}
             {po.allocations.map((a: any) => { const o = orderOf(a.order_id); return o ? <path key={a.order_id} d={`M${X(o.need_day)},${y + 26} l4,5 -4,5 -4,-5Z`} style={{ fill: 'var(--st-late)' }} opacity={0.85}><title>{`${a.order_id} is due on day ${o.need_day}`}</title></path> : null })}
           </g>
         )
       })}
     </svg>
   )
+}
+
+/** What happened to one customer order once the parts arrived. "Fulfilled" only after delivery. */
+function OrderOutcome({ o }: { o: any }) {
+  if (!o) return <span className="sub">—</span>
+  if (o.status === 'fulfilled') return <span className="outcome" title={`fulfilled on day ${o.delivered_day}`}><i className="dot st-protected" />on time</span>
+  if (o.status === 'fulfilled_late') return <span className="outcome" title={`fulfilled on day ${o.delivered_day}`}><i className="dot st-late" />{lateWords(o.late_days)}</span>
+  return <span className="outcome"><i className="dot st-disrupted" />still waiting</span>
 }
 
 export function ShipmentsView() {
@@ -134,14 +153,21 @@ export function ShipmentsView() {
   const i = Math.min(pick, pos.length - 1), po = pos[i], alt = m.altFor(po)
   const ship = po.mode === 'air' ? alt?.air_transit_days : alt?.transit_days
   const what = m.partOf(po.site_id)[1]
+  const out = m.poOutcome(po.id)
+  const learned: any[] = m.delivery?.learned_reliability ?? []
   return (
     <>
-      <Head title={m.executed ? 'Shipments on the way' : 'Shipments in the plan'} text={`The plan buys ${m.part[1]} from new suppliers. Each card is one order to a supplier. ${m.executed ? 'They are ordered, not delivered yet.' : 'Nothing is ordered until you approve.'}`} />
+      <Head title={m.delivery ? 'Shipments delivered' : m.executed ? 'Shipments on the way' : 'Shipments in the plan'} text={`The plan buys ${m.part[1]} from new suppliers. Each card is one order to a supplier. ${m.delivery ? `The clock was fast-forwarded to day ${m.delivery.day}: this is how each one really arrived.` : m.executed ? 'They are ordered, not delivered yet.' : 'Nothing is ordered until you approve.'}`} />
+      {m.executed && !m.delivery && <div className="card ff-card"><div className="card-b"><FastForward /></div></div>}
       <div className="ship-strip">
         {pos.map((p, j) => (
           <button key={p.id} type="button" className={`ship ${j === i ? 'on' : ''}`} onClick={() => { setPick(j); setHl(null) }}>
             <div><b>{m.short(p.site_id)}</b><div className="sub">to our {m.short(p.plant_id)} factory</div>
-              <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 6 }}><span className="tag">{p.mode === 'air' ? 'by air' : 'by sea'}</span><span className="tag">arrives day {p.first_arrival_day}</span></div></div>
+              <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 6 }}><span className="tag">{p.mode === 'air' ? 'by air' : 'by sea'}</span>{(() => {
+                const out = m.poOutcome(p.id)
+                return out ? <span className="tag"><i className={`dot st-${out.days_late > 0 ? 'late' : 'protected'}`} />{out.days_late > 0 ? lateWords(out.days_late) : 'on time'}</span>
+                  : <span className="tag">arrives day {p.first_arrival_day}</span>
+              })()}</div></div>
             <MiniRoute m={m} po={p} i={j} />
           </button>
         ))}
@@ -149,24 +175,41 @@ export function ShipmentsView() {
       <div className="log-grid">
         <div className="card">
           <div className="hold-head">
-            <p className="plain" style={{ margin: 0, maxWidth: '62ch' }}><b>{fmt(po.qty)} {what}</b> from {m.name(po.site_id)} to our {m.short(po.plant_id)} factory, by {po.mode}. {alt ? `${alt.lead_days} days to make, ${ship} days to ship. ` : ''}First ones arrive on <b>day {po.first_arrival_day}</b>, at {usd(po.unit_price_cents)} each.</p>
-            <span className="tag"><i className={`dot st-${m.executed ? 'protected' : 'covered'}`} />{m.executed ? 'Ordered, not delivered yet' : 'Waiting for your OK'}</span>
+            <p className="plain" style={{ margin: 0, maxWidth: '62ch' }}><b>{fmt(po.qty)} {what}</b> from {m.name(po.site_id)} to our {m.short(po.plant_id)} factory, by {po.mode}. {alt ? `${alt.lead_days} days to make, ${ship} days to ship. ` : ''}{out ? <>Planned for day {po.first_arrival_day}; the first ones <b>arrived on day {out.arrived_day}</b>, {lateWords(out.days_late)}, and the last on day {out.received_day ?? '—'}. </> : <>First ones arrive on <b>day {po.first_arrival_day}</b>, </>}at {usd(po.unit_price_cents)} each.</p>
+            <span className="tag"><i className={`dot st-${out ? (out.days_late > 0 ? 'late' : 'protected') : m.executed ? 'protected' : 'covered'}`} />{out ? (out.days_late > 0 ? `Delivered ${lateWords(out.days_late)}` : 'Delivered on time') : m.executed ? 'Ordered, not delivered yet' : 'Waiting for your OK'}</span>
           </div>
           <Hold m={m} po={po} hl={hl} />
           <div className="sub" style={{ padding: '0 18px 16px' }}>Each block is a share of this shipment, marked with the customer order it is for.{alt?.exposure_warning ? ' Watch out: this supplier also depends partly on the stopped site, so DOMINO only counts its clean supply.' : ''}</div>
         </div>
         <div className="card"><div className="card-b">
           <div className="side-h"><h3>Who gets these {what}</h3></div>
-          <div style={{ overflowX: 'auto' }}><table><thead><tr><th>Order</th><th>Customer</th><th className="r">Units</th><th className="r">Arrive</th><th className="r">Due</th></tr></thead><tbody>
+          <div style={{ overflowX: 'auto' }}><table><thead><tr><th>Order</th><th>Customer</th><th className="r">Units</th>{!m.delivery && <th className="r">Arrive</th>}<th className="r">Due</th>{m.delivery && <th>Delivered</th>}</tr></thead><tbody>
             {po.allocations.map((a: any) => {
               const o = m.orders.find((x) => x.order_id === a.order_id)
-              return <tr key={a.order_id} onMouseEnter={() => setHl(a.order_id)} onMouseLeave={() => setHl(null)}><td className="mono">{a.order_id}</td><td>{o ? m.name(o.customer) : ''}</td><td className="r">{a.qty}</td><td className="r">day {a.arrival_day}</td><td className="r">{o ? `day ${o.need_day}` : ''}</td></tr>
+              return <tr key={a.order_id} onMouseEnter={() => setHl(a.order_id)} onMouseLeave={() => setHl(null)}><td className="mono">{a.order_id}</td><td>{o ? m.name(o.customer) : ''}</td><td className="r">{a.qty}</td>{!m.delivery && <td className="r">day {a.arrival_day}</td>}<td className="r">{o ? `day ${o.need_day}` : ''}</td>{m.delivery && <td><OrderOutcome o={m.orderOutcome(a.order_id)} /></td>}</tr>
             })}
           </tbody></table></div>
         </div></div>
       </div>
       <div className="card" style={{ marginTop: 16 }}><div className="card-h"><h2>When the new {m.part[1]} arrive</h2><span className="sub">grey is making, green is shipping, pink marks are the days customers need their orders</span></div>
         <div className="card-b" style={{ overflowX: 'auto' }}><Gantt m={m} pick={i} setPick={(j) => { setPick(j); setHl(null) }} /></div></div>
+      {m.delivery && (
+        <div className="log-grid" style={{ marginTop: 16 }}>
+          <div className="card"><div className="card-b">
+            <FastForward />
+            <div style={{ overflowX: 'auto', marginTop: 10 }}><table><thead><tr><th>Order</th><th>Customer</th><th className="r">Due</th><th className="r">Ready</th><th>Outcome</th></tr></thead><tbody>
+              {(m.delivery.orders ?? []).map((o: any) => (
+                <tr key={o.id}><td className="mono">{o.id}</td><td>{m.name(o.customer)}{o.tier === 'strategic' ? <span className="sub"> · strategic</span> : null}</td><td className="r">day {o.need_day}</td><td className="r">{o.delivered_day != null ? `day ${o.delivered_day}` : '—'}</td><td><OrderOutcome o={o} /></td></tr>
+              ))}
+            </tbody></table></div>
+          </div></div>
+          <div className="card"><div className="card-b">
+            <div className="side-h"><h3>What DOMINO learned</h3><span className="mono muted">{m.delivery.memory_graph}</span></div>
+            <p className="sub">Reliability per supplier, seeded → learned from these deliveries. It survives a world reset; the next plan ranks suppliers by it.</p>
+            <LearnedList rows={learned} names={m.name} />
+          </div></div>
+        </div>
+      )}
     </>
   )
 }

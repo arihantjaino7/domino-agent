@@ -26,6 +26,8 @@ export const fmt = (n: number | null | undefined) => (n == null ? '—' : Number
 export const cap1 = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s)
 /** "1 supplier", "3 suppliers" */
 export const plural = (n: number | null | undefined, one: string, many = `${one}s`) => `${fmt(n)} ${n === 1 ? one : many}`
+/** "on time", "1 day late", "9 days late" */
+export const lateWords = (days: number) => (days > 0 ? `${days} ${days === 1 ? 'day' : 'days'} late` : 'on time')
 
 export interface Model {
   ready: boolean
@@ -61,6 +63,9 @@ export interface Model {
   altFor: (po: any) => any | null
   hasIncident: boolean
   noExposure: boolean // ran, but nothing in the graph is affected
+  delivery: any | null // set only after the war room fast-forwarded to delivery
+  poOutcome: (poId: string) => any | null
+  orderOutcome: (orderId: string) => any | null
 }
 
 export function useModel(): Model {
@@ -124,5 +129,8 @@ function build(graph: WorldGraph | null, summary: any, d: Derived, steps: Step[]
     },
     hasIncident: !!d.declared,
     noExposure: runStatus === 'completed' && !(d.trace?.evidence?.length),
+    delivery: d.delivery,
+    poOutcome: (poId: string) => d.delivery?.pos?.find((p: any) => p.po_id === poId) ?? null,
+    orderOutcome: (orderId: string) => d.delivery?.orders?.find((o: any) => o.id === orderId) ?? null,
   }
 }

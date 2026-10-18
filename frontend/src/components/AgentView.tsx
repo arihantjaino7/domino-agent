@@ -4,6 +4,7 @@ import { api } from '../lib/api'
 import { STEPS, useStore, type StepId } from '../lib/store'
 import type { Memory } from '../lib/types'
 import { Head, RunPanel } from './Controls'
+import { FastForward, LearnedList, PlanMemory } from './Delivery'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -60,11 +61,18 @@ function MemoryPanel({ refresh }: { refresh: string }) {
         </div>
       </div>
       {err && <p className="plain">Could not read memory: {err}</p>}
-      {mem && !err && (mem.counts.lessons === 0 && mem.counts.incidents === 0 ? (
+      {mem && !err && (mem.counts.lessons === 0 && mem.counts.incidents === 0 && !mem.reliability?.length ? (
         <p className="plain muted">Nothing remembered yet. {source === 'demo' ? 'Finish a demo run and its lessons appear here.' : 'Lessons from real agent runs appear here once a run finishes.'}</p>
       ) : (
         <>
-          <p className="sub">{plural(mem.counts.incidents, 'past incident')}, {plural(mem.counts.lessons, 'lesson')}. Kept in <span className="mono">{mem.graph}</span>, which survives a world reset. The agent can look these up with its recall_history tool.</p>
+          <p className="sub">{plural(mem.counts.incidents, 'past incident')}, {plural(mem.counts.lessons, 'lesson')}{mem.reliability?.length ? `, ${plural(mem.reliability.length, 'supplier score')}` : ''}. Kept in <span className="mono">{mem.graph}</span>, which survives a world reset. The agent can look these up with its recall_history tool.</p>
+          {mem.reliability?.length > 0 && (
+            <div className="mem-inc">
+              <div className="mem-h"><span>Supplier reliability, learned from deliveries</span><span className="sub">seeded → learned</span></div>
+              <p className="sub" style={{ marginTop: 4 }}>The balanced plan ranks suppliers by cost × (2 − reliability), so a supplier that delivered late is tried later next time.</p>
+              <LearnedList rows={mem.reliability} />
+            </div>
+          )}
           {mem.incidents.map((inc) => {
             const ls = mem.lessons.filter((l) => l.incident_id === inc.id)
             return (
@@ -204,11 +212,13 @@ export function AgentView() {
               {m.executed ? (
                 <>
                   <div className="side-h"><h2>Plan done</h2><span className="tag"><i className={`dot st-${m.d.receipt?.receipt_matches_plan ? 'protected' : 'disrupted'}`} />{m.d.receipt?.receipt_matches_plan ? 'matches the plan' : 'receipt mismatch'}</span></div>
-                  <p className="plain">{m.d.receipt?.pos_created} orders were sent to suppliers. {m.d.receipt?.orders_protected?.length} customer orders are protected (projected) until the parts arrive.</p>
+                  <p className="plain">{m.d.receipt?.pos_created} orders were sent to suppliers. {m.delivery ? `${m.d.receipt?.orders_protected?.length} customer orders were protected; the parts have now arrived.` : `${m.d.receipt?.orders_protected?.length} customer orders are protected (projected) until the parts arrive.`}</p>
                   {m.d.verify?.checks ? (
                     <details className="checks-box"><summary>{m.d.verify.checks.filter((c: any) => c.ok).length} of {m.d.verify.checks.length} safety checks passed</summary>
                       <div className="checks">{m.d.verify.checks.map((c: any) => <div className="check" key={c.id}><b><i className={`dot st-${c.ok ? 'protected' : 'disrupted'}`} />{c.id}</b>{c.name}</div>)}</div></details>
                   ) : <p className="sub" style={{ marginTop: 8 }}>Running the safety checks…</p>}
+                  <PlanMemory plan={pl} />
+                  <div style={{ marginTop: 14 }}><FastForward /></div>
                 </>
               ) : (
                 <>
@@ -221,7 +231,8 @@ export function AgentView() {
                     <div><span className="sub">Orders saved</span><b>{rec.protected_projected}</b><span className="sub">protected (projected)</span></div>
                     <div><span className="sub">Still late</span><b>{rec.late}</b></div>
                   </div>
-                  <div className="sub">Your OK is tied to this exact plan (<span className="mono">{pl.plan_hash}</span>) on world version {m.d.declared?.world_version ?? '—'}. If anything changes, DOMINO asks again.</div>
+                  <PlanMemory plan={pl} />
+                  <div className="sub" style={{ marginTop: 10 }}>Your OK is tied to this exact plan (<span className="mono">{pl.plan_hash}</span>) on world version {m.d.declared?.world_version ?? '—'}. If anything changes, DOMINO asks again.</div>
                   <div className="fix-actions" style={{ marginTop: 12 }}>
                     <button type="button" className="btn btn-accent" disabled={m.phase !== 'awaiting'} onClick={() => void st.approve()}>{m.phase === 'approving' ? 'Approving' : 'Approve plan'}</button>
                     <button type="button" className="btn btn-ghost" disabled={m.phase !== 'awaiting'} onClick={() => setRejecting((r) => !r)}>Reject</button>
@@ -257,7 +268,7 @@ export function AgentView() {
             <div className="card"><div className="card-b"><div className="side-h"><h3>What it learned</h3><span className="mono muted">{m.d.memoryGraph}</span></div>
               {m.d.lessons.map((l, i) => <p className="plain" key={i}>{l.text}</p>)}</div></div>
           )}
-          <MemoryPanel refresh={m.phase} />
+          <MemoryPanel refresh={`${m.phase}:${m.delivery?.day ?? ''}`} />
           {(pl || m.phase === 'done' || m.phase === 'failed') && <div className="card"><div className="card-b"><div className="side-h"><h3>Run again</h3></div><RunPanel compact /></div></div>}
         </div>
       </div>
