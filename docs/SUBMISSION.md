@@ -60,7 +60,7 @@ From `eval/RESULTS.md` (seeds 42–61, Monsoon and Panel Fire, 40 cases, 4,766 o
 ## Still to do before submitting
 
 - [ ] Push `main` and make the repo public; open it in a logged-out window.
-- [ ] Hero GIF, demo video link and live or replay URL in the README (`TODO(gif)`, `TODO(video)`, `TODO(url)`).
-- [ ] Record the video with a real Claude Code run: tool calls, the tier-1 vs multi-tier contrast, the approval pause, verification and a dated memory recall.
-- [ ] Confirm the review wording in `docs/AI_DISCLOSURE.md`.
+- [x] Hero GIF and the local Replay line in the README.
+- [x] Video made from a real Claude Code run (`video/renders/domino-demo-v2.mp4`, 2:40, AI voice): tool calls, tier-1 vs multi-tier, the approval pause, verification and a dated memory recall.
+- [x] Review wording in `docs/AI_DISCLOSURE.md` confirmed by the author (Oct 18).
 - [ ] Blog post link (optional side prize).

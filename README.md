@@ -4,11 +4,13 @@
 
 ## 1. Hero GIF and one-liner
 
-TODO(gif)
+![DOMINO war room during a real Claude Code run: the tier-1 view sees 0 affected suppliers, DOMINO finds 2 suppliers, 38 exposed orders and 13 projected late](docs/media/domino-hero.gif)
+
+*A real Claude Code run, recorded live: the flood stops VoltCell, a tier-1 view sees nothing, and DOMINO follows the graph to 2 suppliers and 38 exposed orders.*
 
 DOMINO follows supply-chain dependencies, tests recovery plans in FalkorDB copies and executes the plan a human approves.
 
-Live demo: TODO(url). Demo video: TODO(video).
+Live demo: no hosted copy. Run it locally (section 10) and choose **Replay** to watch a recorded real Claude Code run, with no API key and no change to the graph. Demo video: TODO(video).
 
 ## 2. The problem
 
