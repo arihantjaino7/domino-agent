@@ -76,7 +76,7 @@ export function LiveAlerts() {
                   <span className={`tag live-alert-level level-${event.alert_level.toLowerCase()}`}>{event.alert_level} alert</span>
                   {event.updated_at && <time className="sub" dateTime={event.updated_at} title={when(event.updated_at)}>{age(event.updated_at, now)}</time>}
                 </div>
-                <h3>{event.title}</h3>
+                <h3 title={event.title}>{event.title.length > 140 ? `${event.title.slice(0, 137).trimEnd()}…` : event.title}</h3>
                 <p className="sub">{event.country}{event.starts_at && <> · Started {when(event.starts_at)}</>}</p>
                 {event.in_graph ? (
                   <>
