@@ -6,6 +6,7 @@ index and the unique constraint to every copy, so copies never re-apply it.
 
 from __future__ import annotations
 
+import uuid
 from typing import Any
 
 from domino.config import settings
@@ -26,9 +27,14 @@ def drop_graph(name: str) -> bool:
 
 
 def copy_graph(src: str, dst: str) -> None:
-    """Replace `dst` with a copy of `src` (GRAPH.COPY)."""
-    drop_graph(dst)
-    get_db().select_graph(src).copy(dst)
+    """Replace `dst` with a copy of `src` (GRAPH.COPY).
+
+    The copy is made under a temporary name and then RENAMEd over `dst`, which Redis does in one
+    step, so readers of `dst` (the live world during a reset) never find it missing."""
+    db = get_db()
+    tmp = f"{dst}:swap:{uuid.uuid4().hex[:8]}"
+    db.select_graph(src).copy(tmp)
+    db.connection.execute_command("RENAME", tmp, dst)
 
 
 def _load_batches(query: str, rows: list[dict[str, Any]], graph: str) -> int:
