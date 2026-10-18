@@ -22,5 +22,3 @@ These author contributions were confirmed by the author on Oct 18, 2026.
 The detailed log below identifies the implementation and supporting work assisted by each tool.
 
 Claude Code also appears **inside the product** as the runtime agent over MCP. That is separate from its use as a development assistant: fixed deterministic engines compute the results, and purchase-order execution requires human approval.
-
-- **Deploy (Oct 18):** Claude Code wrote the one-container image (`deploy/single/`), the Hugging Face Space files (`deploy/huggingface/`), `docs/DEPLOY_HF.md` and the leftover-disruption headline, and tested the image locally. The author creates the Space under their own account.
