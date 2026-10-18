@@ -10,7 +10,7 @@
 
 DOMINO follows supply-chain dependencies, tests recovery plans in FalkorDB copies and executes the plan a human approves.
 
-Live demo: no hosted copy. Run it locally (section 10) and choose **Replay** to watch a recorded real Claude Code run, with no API key and no change to the graph. Demo video: TODO(video).
+Live demo: no hosted copy. Run it locally (section 10) and choose **Replay** to watch a recorded real Claude Code run, with no API key and no change to the graph. Demo video: [youtu.be/H7s2jJbKR4Y](https://youtu.be/H7s2jJbKR4Y) (2:40, AI voiceover, real Claude Code run).
 
 ## 2. The problem
 
