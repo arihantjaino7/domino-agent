@@ -1,4 +1,4 @@
-import type { Memory, Places, Recording, ReplayMeta, RunEvent, Scenario, Summary, WorldGraph } from './types'
+import type { LiveAlertsResponse, Memory, Places, Recording, ReplayMeta, RunEvent, Scenario, Summary, WorldGraph } from './types'
 
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, {
@@ -19,6 +19,7 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  liveAlerts: () => req<LiveAlertsResponse>('/api/live-alerts'),
   graph: () => req<WorldGraph>('/api/graph'),
   summary: () => req<Summary>('/api/world/summary'),
   scenarios: () => req<{ scenarios: Scenario[]; claude_api?: boolean; mcp_key?: boolean }>('/api/scenarios'),

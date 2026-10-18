@@ -477,3 +477,21 @@ select.pick { height: 34px; padding: 0 30px 0 12px; border-radius: 99px; backgro
   .xr-metrics { grid-column: 2; grid-template-columns: 48px 64px minmax(0, 1fr); }
 }
 .xr-eyebrow { font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--accent-2); margin-bottom: 10px; }
+/* ---------- Live disaster alerts ---------- */
+.live-alerts { margin-bottom: 16px; }
+.live-alerts .card-h p, .live-alerts-source { margin: 0; }
+.live-alerts-source a { color: inherit; text-underline-offset: 3px; }
+.live-alert-list { list-style: none; padding: 0; margin: 16px 0 0; max-height: 480px; overflow-y: auto; }
+.live-alert { padding: 16px 0; min-width: 0; overflow-wrap: anywhere; border-top: 1px solid var(--line-2); }
+.live-alert-meta, .live-alert-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.live-alert h3 { margin-top: 8px; }
+.live-alert h3 + .sub { margin: 4px 0 0; }
+.live-alert-actions { margin-top: 12px; }
+.live-alert-level.level-red { color: var(--st-disrupted); border-color: var(--st-disrupted); }
+.live-alert-level.level-orange { color: var(--st-covered); border-color: var(--st-covered); }
+.live-alert-copy { display: grid; gap: 8px; margin-top: 12px; }
+.live-alert-copy textarea { width: 100%; min-height: 100px; resize: vertical; background: var(--surface-2); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 10px; font: 12px/1.5 var(--mono); }
+@media (max-width: 480px) {
+  .live-alert-actions { align-items: stretch; }
+  .live-alert-actions .btn { width: 100%; height: auto; min-height: 40px; white-space: normal; padding: 10px 14px; }
+}

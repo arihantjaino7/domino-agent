@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { api } from './api'
 import { useToasts } from './toasts'
 import { subscribe } from './sse'
-import type { NodeStatus, Places, Recording, ReplayMeta, RunEvent, RunStatus, Scenario, Summary, WorldGraph } from './types'
+import type { LiveAlert, NodeStatus, Places, Recording, ReplayMeta, RunEvent, RunStatus, Scenario, Summary, WorldGraph } from './types'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -117,6 +117,7 @@ interface State {
   deliver: () => Promise<void>
   reset: () => Promise<void>
   inject: (entityId: string, label: string) => Promise<void>
+  stopLiveSites: (event: LiveAlert) => Promise<void>
 }
 
 const EMPTY: Derived = {
@@ -490,6 +491,27 @@ export const useStore = create<State>((set, get) => ({
       await get().refresh()
       useToasts.getState().push('World reset from pristine')
     } finally {
+      set({ busy: false })
+    }
+  },
+  stopLiveSites: async (event) => {
+    if (get().busy || ['running', 'approving', 'awaiting_approval'].includes(get().runStatus) || !event.site_ids.length) return
+    set({ busy: true, error: null })
+    const stopped = new Set<string>()
+    try {
+      // The manual-incident API accepts up to twenty entities per request.
+      for (let i = 0; i < event.site_ids.length; i += 20) {
+        const result = await api.inject({ entity_ids: event.site_ids.slice(i, i + 20), kind: event.type_label.toLowerCase(),
+          title: `GDACS: ${event.title}`.slice(0, 200), capacity_factor: 0, duration_days: 21 })
+        result.site_ids.forEach((id) => stopped.add(id))
+      }
+      useToasts.getState().push(`${stopped.size} site(s) stopped in this world from the GDACS alert.`)
+    } catch (e) {
+      set({ error: `${stopped.size ? `${stopped.size} site(s) were stopped before the request failed. ` : ''}${String((e as Error).message ?? e)}` })
+    } finally {
+      try { await get().refresh() } catch {
+        set({ error: 'Could not refresh the world after the manual stop. Reload to check its current state.' })
+      }
       set({ busy: false })
     }
   },

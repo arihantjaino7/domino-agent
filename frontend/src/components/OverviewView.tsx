@@ -5,6 +5,7 @@ import { useStore } from '../lib/store'
 import type { NodeStatus } from '../lib/types'
 import { COUNTRY_LABELS, EX, GEO, GH, GW, LAND, P, PLANT_GEO, SY, VB, grid, iso } from '../lib/geo'
 import { McpGuide, Progress, RunPanel } from './Controls'
+import { LiveAlerts } from './LiveAlerts'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -252,6 +253,8 @@ export function OverviewView({ go }: { go: (v: ViewId) => void }) {
           <RunPanel />
         </div></div>
       )}
+
+      {(st.mode === 'mcp' || st.mode === 'scripted') && <LiveAlerts />}
 
       <section className="ov-main">
         <div className="card map-card">

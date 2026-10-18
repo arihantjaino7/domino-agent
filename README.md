@@ -129,6 +129,10 @@ After a plan is executed and verified, the war room's **Fast-forward to delivery
 | Claude Code over MCP | Locally: run `make agent-workspace`, then use the generated workspace with Claude Code and watch the war room. Against the live site, from any computer: one `claude mcp add` command, then `/mcp__domino__monsoon` ([MCP_REMOTE.md](docs/MCP_REMOTE.md)). | Free with a Claude subscription; no Anthropic API key needed for this mode. |
 | Claude API | Use the API mode with `ANTHROPIC_API_KEY` configured. | Paid and rate-limited by the application. **Implemented but not run against the real API:** the author has no API budget, so this path is tested only with the scripted stand-in model. The real-model evidence in this repo is the Claude Code run. |
 
+### Live alerts
+
+In **Demo** and **Claude Code** modes, Overview's **Live alerts** panel shows real disasters from the [Global Disaster Alert and Coordination System (GDACS)](https://www.gdacs.org/). `GET /api/live-alerts` fetches public GeoJSON for six hazard types with an 8-second timeout and a 10-minute cache, using recent search results when a map resource is absent. A named read-only query loads graph coordinates; Python matches event centroids to nearby Sites, Plants, Ports and Regions. These screening radii indicate proximity, not confirmed damage. **Copy for Claude Code** copies `/mcp__domino__alert <event text>`; **Stop these sites here** uses the manual-incident API for nearby supplier sites. Starting a run resets manual stops. Feed failures show an empty state. **Not in the graph** does not mean safe. Supplier data and simulation scenarios remain synthetic.
+
 ## 8. Safety and verification
 
 - The LLM never writes Cypher. Tools call fixed, parameterised queries through deterministic engines.
@@ -166,7 +170,7 @@ What the numbers say:
 
 **Scripted agent runs (free, plumbing only).** Monsoon, Panel Fire and the Antwerp non-event, 2 runs each: 6/6 pass. Disruptions paused for approval, placed no PO before approval and passed verification afterwards; the non-event answered `not_in_graph` and left the world unchanged. This proves the tool path, not the intelligence of a real model; real-model runs are not part of this evaluation.
 
-**Tests:** 106 backend tests (`make test`) and 24 evaluation tests (`uv run --project backend pytest eval`), all passing.
+**Tests:** 130 backend tests (`make test`) and 24 evaluation tests (`uv run --project backend pytest eval`), all passing.
 
 **Query latency** (local FalkorDB, `run_query` log, during evaluation; p50 / p95 in ms): multi-tier exposure `exposure/exposure` 18.97 / 22.95; tier-1 view `exposure/tier1_view` 3.95 / 5.29; max-flow `flow/maxflow` 5.80 / 12.45 (2,294 calls); order projection `shortage/orders` 32.71 / 46.26; execution preflight 5.21 / 6.60 and atomic write 6.26 / 7.62. These are local measurements, not deployment latency. The full table is in [RESULTS.md](eval/RESULTS.md#named-query-performance).
 
@@ -227,7 +231,7 @@ The same image runs anywhere: `docker build -f deploy/single/Dockerfile -t domin
 
 ## 11. Limitations and assumptions
 
-- All data and alerts are synthetic. There is no real ERP or supplier integration.
+- Supply-chain data and simulation scenarios are synthetic; the Live alerts panel reads real GDACS events. There is no real ERP or supplier integration.
 - Max-flow is a single-commodity bound for each component/plant pair. The allocator and verifier account for shared upstream inputs across the plan.
 - Greedy allocation is deterministic but not guaranteed optimal. Weekly rates and integer simulation days simplify operations.
 - The sandbox uses a deterministic reality model, not a forecast of a real supplier’s behaviour.
