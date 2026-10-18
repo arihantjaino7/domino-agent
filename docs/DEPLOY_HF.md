@@ -1,4 +1,7 @@
-# Deploying DOMINO on Hugging Face Spaces (free, no credit card)
+# Deploying DOMINO on Hugging Face Spaces
+
+> Since mid-2026 Hugging Face requires a PRO plan for Docker Spaces. For a free host, use
+> [DEPLOY_RENDER.md](DEPLOY_RENDER.md) (the same image). These steps still apply to a PRO account.
 
 One container runs everything: FalkorDB (the pinned image from the spike, listening only inside the container),
 the FastAPI app and the built war room. The Space builds the code straight from GitHub, so it needs just two files

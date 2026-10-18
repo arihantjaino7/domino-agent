@@ -1,0 +1,14 @@
+# Render Blueprint: DOMINO in one free container (FalkorDB + app + war room). Guide: docs/DEPLOY_RENDER.md
+services:
+  - type: web
+    name: domino
+    runtime: docker
+    plan: free
+    dockerfilePath: ./deploy/single/Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      # A long random key, so nobody can drive the shared world through /mcp unless you give them the key.
+      - key: MCP_API_KEY
+        generateValue: true

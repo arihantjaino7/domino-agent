@@ -207,7 +207,7 @@ For a free headless scripted run:
 make demo-headless SCENARIO=monsoon DRY_RUN=1
 ```
 
-For a free public copy in one container (FalkorDB + app) on Hugging Face Spaces, follow [DEPLOY_HF.md](docs/DEPLOY_HF.md); the same image runs with `docker run` anywhere.
+For a free public copy in one container (FalkorDB + app) on Render, follow [DEPLOY_RENDER.md](docs/DEPLOY_RENDER.md) (Hugging Face Spaces with a PRO plan: [DEPLOY_HF.md](docs/DEPLOY_HF.md)); the same image runs with `docker run` anywhere.
 
 Run `make test` for backend tests. Run `pnpm --dir frontend lint` and `pnpm --dir frontend build` for frontend checks. To use Claude Code as the agent, keep the app running and run `make agent-workspace`; see [deployment and MCP instructions](docs/DEPLOY.md) for hosted configuration and authentication. Deployment status and public access still need author review.
 

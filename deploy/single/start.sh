@@ -14,6 +14,12 @@ if [ -z "$MCP_API_KEY" ]; then
   echo "MCP_API_KEY not set: /mcp is closed (random key). Set it as a secret to use Claude Code against this server."
 fi
 
+# The MCP Host-header check must accept the public name. Render and Hugging Face tell the container what it is.
+if [ -z "$DOMINO_PUBLIC_HOST" ]; then
+  DOMINO_PUBLIC_HOST="${RENDER_EXTERNAL_HOSTNAME:-$SPACE_HOST}"
+  export DOMINO_PUBLIC_HOST
+fi
+
 # FalkorDB listens only inside the container. FALKORDB_ARGS comes from the base image
 # (MAX_QUEUED_QUERIES 25 TIMEOUT 1000 RESULTSET_SIZE 10000, the settings the spike passed with).
 # shellcheck disable=SC2086
