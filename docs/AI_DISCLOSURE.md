@@ -16,7 +16,7 @@ These author contributions were confirmed by the author on Oct 18, 2026.
 
 | Tool | Assistance |
 |---|---|
-| Claude Code (Anthropic) | Wrote most application code and automated tests from the project requirements; assisted with planning, implementation details, debugging, documentation, evaluation execution and demo production. |
-| Codex (OpenAI) | Wrote the independent evaluation harness and oracle, generated documentation, audited correctness and wording, and edited the initial demo video with HyperFrames. |
+| Claude Code (Anthropic) | helps in writing application code and automated tests from the project requirements; assisted with planning, implementation details, debugging, documentation, evaluation execution |
+| Codex (OpenAI) | Wrote the independent evaluation harness and oracle, generated documentation, audited correctness and wording |
 
 Claude Code also appears **inside the product** as the runtime agent over MCP. That is separate from its use as a development assistant: fixed deterministic engines compute the results, and purchase-order execution requires human approval.
