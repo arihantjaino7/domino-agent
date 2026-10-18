@@ -19,7 +19,7 @@ export function FastForward() {
     return (
       <div className="ff done">
         <div className="side-h"><h3>Delivered by day {dl.day}</h3><span className="tag"><i className={`dot st-${dl.counts?.fulfilled_late || dl.counts?.unfulfilled ? 'late' : 'protected'}`} />{fmt(dl.counts?.fulfilled)} of {plural(dl.orders?.length, 'order')} on time</span></div>
-        <p className="plain">{plural((dl.pos?.length ?? 0) - late, 'supplier order')} arrived on time and {fmt(late)} late. {dl.counts?.fulfilled_late ? `${plural(dl.counts.fulfilled_late, 'customer order')} shipped late; ` : ''}{dl.counts?.unfulfilled ? `${plural(dl.counts.unfulfilled, 'order')} still waits for parts; ` : ''}DOMINO wrote how each supplier did to <span className="mono">{dl.memory_graph}</span>, and the next plan ranks suppliers by it.</p>
+        <p className="plain">{plural((dl.pos?.length ?? 0) - late, 'supplier order')} arrived by the planned day and {fmt(late)} came in late. {dl.counts?.fulfilled_late ? `${plural(dl.counts.fulfilled_late, 'customer order')} shipped late; ` : ''}{dl.counts?.unfulfilled ? `${plural(dl.counts.unfulfilled, 'order')} still waits for parts; ` : ''}DOMINO wrote how each supplier did to <span className="mono">{dl.memory_graph}</span>, and the next plan ranks suppliers by it.</p>
       </div>
     )
   }

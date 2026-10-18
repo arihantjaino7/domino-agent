@@ -247,6 +247,17 @@ export function OverviewView({ go }: { go: (v: ViewId) => void }) {
         </div></div>
       )}
 
+      {m.phase === 'idle' && !leftover.length && (
+        <div className="card" style={{ marginBottom: 16 }}><div className="card-b">
+          <div className="side-h"><h2>New here? Start with one of these</h2><span className="sub">Nothing below changes the shared world except the second one</span></div>
+          <div className="start-actions">
+            <button type="button" className="btn btn-accent" disabled={st.busy || !st.replays.length} onClick={() => { st.setMode('replay'); void st.run() }}>Watch a real Claude Code run (replay)</button>
+            <button type="button" className="btn btn-ghost" disabled={st.busy} onClick={() => { st.setMode('scripted'); void st.run() }}>Run the Monsoon demo myself</button>
+            <button type="button" className="btn btn-ghost" onClick={() => { location.hash = '#xray' }}>Find the hidden weak points</button>
+          </div>
+        </div></div>
+      )}
+
       {(m.phase === 'idle' || m.phase === 'failed' || (m.phase === 'done' && !d.declared)) && (
         <div className="card" style={{ marginBottom: 16 }}><div className="card-b">
           <div className="side-h"><h2>{m.phase === 'idle' ? 'Start a disruption' : 'Run again'}</h2><span className="sub">{st.mode === 'scripted' ? 'Demo mode: free and offline' : st.mode === 'replay' ? 'Replay: a recorded run, nothing is changed' : st.mode === 'mcp' ? 'Claude Code drives DOMINO' : 'Claude runs in the backend'}</span></div>
