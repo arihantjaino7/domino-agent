@@ -176,6 +176,7 @@ function Board({ m, lens, focus }: { m: Model; lens: 'tier1' | 'domino'; focus: 
 export function OverviewView({ go }: { go: (v: ViewId) => void }) {
   const m = useModel()
   const st = useStore()
+  const guided = st.experience === 'guided'
   const [lens, setLens] = useState<'tier1' | 'domino'>('domino')
   const [focus, setFocus] = useState<string | null>(null)
   const toured = useRef(false)
@@ -200,10 +201,10 @@ export function OverviewView({ go }: { go: (v: ViewId) => void }) {
   const leftover = st.summary?.incidents ?? []
   if ((m.phase === 'idle' || !T) && leftover.length) {
     h1 = 'This world still has an earlier disruption.'
-    lede = `${leftover.map((i) => i.id).join(', ')} from an earlier run: ${fmt(T?.orders)} customer orders, ${fmt(T?.projected_late ?? 0)} projected late. Reset the world to go back to the healthy start; starting a run below resets it too.`
+    lede = `${leftover.map((i) => i.id).join(', ')} from an earlier run: ${fmt(T?.orders)} customer orders, ${fmt(T?.projected_late ?? 0)} projected late. ${guided ? 'Starting the flood in the guide puts the world back to its healthy start first.' : 'Reset the world to go back to the healthy start; starting a run below resets it too.'}`
   } else if (m.phase === 'idle' || !T) {
     h1 = 'Your supply chain is running normally.'
-    lede = `${fmt(T?.orders)} customer orders, ${fmt(T?.projected_late ?? 0)} projected late. Pick a disruption below to watch DOMINO find the problem, plan a fix and ask for your OK.`
+    lede = `${fmt(T?.orders)} customer orders, ${fmt(T?.projected_late ?? 0)} projected late. ${guided ? 'The guide below starts a disruption when you are ready.' : 'Pick a disruption below to watch DOMINO find the problem, plan a fix and ask for your OK.'}`
   } else if (m.noExposure) {
     h1 = d.report?.headline ?? 'Nothing in your supply chain is affected.'
     lede = 'DOMINO checked the graph and found no supplier of yours in the affected area. Not being in the graph does not mean safe, so the report says so.'
@@ -247,11 +248,11 @@ export function OverviewView({ go }: { go: (v: ViewId) => void }) {
         </div></div>
       )}
 
-      {m.phase === 'idle' && !leftover.length && (
+      {!guided && m.phase === 'idle' && !leftover.length && (
         <div className="card" style={{ marginBottom: 16 }}><div className="card-b">
-          <div className="side-h"><h2>New here? Start with one of these</h2><span className="sub">Nothing below changes the shared world except the second one</span></div>
+          <div className="side-h"><h2>New here? Start with one of these</h2><span className="sub">Only the guide and the demo change the shared world</span></div>
           <div className="start-actions">
-            <button type="button" className="btn btn-accent" onClick={() => st.setTour(0)}>Take the one-minute tour</button>
+            <button type="button" className="btn btn-accent" onClick={() => { useStore.setState({ guideMax: 0 }); st.setGuideStep(0); st.setMode('scripted'); st.setExperience('guided') }}>Guide me through it</button>
             <button type="button" className="btn btn-ghost" disabled={st.busy || !st.replays.length} onClick={() => { st.setMode('replay'); void st.run() }}>Watch a real Claude Code run (replay)</button>
             <button type="button" className="btn btn-ghost" disabled={st.busy} onClick={() => { st.setMode('scripted'); void st.run() }}>Run the Monsoon demo myself</button>
             <button type="button" className="btn btn-ghost" onClick={() => { location.hash = '#xray' }}>Find the hidden weak points</button>
@@ -259,14 +260,14 @@ export function OverviewView({ go }: { go: (v: ViewId) => void }) {
         </div></div>
       )}
 
-      {(m.phase === 'idle' || m.phase === 'failed' || (m.phase === 'done' && !d.declared)) && (
+      {!guided && (m.phase === 'idle' || m.phase === 'failed' || (m.phase === 'done' && !d.declared)) && (
         <div className="card" style={{ marginBottom: 16 }}><div className="card-b">
           <div className="side-h"><h2>{m.phase === 'idle' ? 'Start a disruption' : 'Run again'}</h2><span className="sub">{st.mode === 'scripted' ? 'Demo mode: free and offline' : st.mode === 'replay' ? 'Replay: a recorded run, nothing is changed' : st.mode === 'mcp' ? 'Claude Code drives DOMINO' : 'Claude runs in the backend'}</span></div>
           <RunPanel />
         </div></div>
       )}
 
-      {(st.mode === 'mcp' || st.mode === 'scripted') && <LiveAlerts />}
+      {!guided && (st.mode === 'mcp' || st.mode === 'scripted') && <LiveAlerts />}
 
       <section className="ov-main">
         <div className="card map-card">
@@ -362,7 +363,7 @@ export function OverviewView({ go }: { go: (v: ViewId) => void }) {
           </div>
         </section>
       )}
-      {m.phase === 'done' && d.declared && (
+      {!guided && m.phase === 'done' && d.declared && (
         <div className="card" style={{ marginTop: 16 }}><div className="card-b">
           <div className="side-h"><h2>Try another disruption</h2><span className="sub">a demo run starts from a fresh world</span></div>
           <RunPanel compact />

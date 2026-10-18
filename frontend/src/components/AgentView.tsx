@@ -103,6 +103,7 @@ function MemoryPanel({ refresh }: { refresh: string }) {
 export function AgentView() {
   const m = useModel()
   const st = useStore()
+  const guided = st.experience === 'guided'
   const [node, setNode] = useState<StepId | null>(null)
   const [intro, setIntro] = useState(1)
   const [rejecting, setRejecting] = useState(false)
@@ -246,7 +247,7 @@ export function AgentView() {
                 </>
               )}
             </div></div>
-          ) : (
+          ) : guided ? null : (
             <div className="card"><div className="card-b">
               <div className="side-h"><h2>{m.phase === 'idle' ? 'Start the agent' : 'Controls'}</h2></div>
               <RunPanel compact />
@@ -269,7 +270,7 @@ export function AgentView() {
               {m.d.lessons.map((l, i) => <p className="plain" key={i}>{l.text}</p>)}</div></div>
           )}
           <MemoryPanel refresh={`${m.phase}:${m.delivery?.day ?? ''}`} />
-          {(pl || m.phase === 'done' || m.phase === 'failed') && <div className="card"><div className="card-b"><div className="side-h"><h3>Run again</h3></div><RunPanel compact /></div></div>}
+          {!guided && (pl || m.phase === 'done' || m.phase === 'failed') && <div className="card"><div className="card-b"><div className="side-h"><h3>Run again</h3></div><RunPanel compact /></div></div>}
         </div>
       </div>
     </>

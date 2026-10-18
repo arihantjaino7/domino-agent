@@ -14,6 +14,7 @@ from fastapi import APIRouter
 from domino.agent import memory
 from domino.config import settings
 from domino.engines.delivery import learned_for
+from domino.graph.run_query import QueryError
 
 router = APIRouter(prefix="/api")
 
@@ -27,7 +28,10 @@ def _memory(source: str) -> dict[str, Any]:
     incidents = memory.list_incidents(graph=g)   # both return [] while the graph does not exist yet
     lessons = memory.list_lessons(graph=g)
     ids = {e for row in incidents + lessons for e in row["entities"] if e}
-    names = memory.entity_names(sorted(ids), settings.world_graph_live)
+    try:
+        names = memory.entity_names(sorted(ids), settings.world_graph_live)
+    except QueryError:  # the live world is being replaced by a reset at this instant; show ids, not an error
+        names = {}
 
     def ents(row: dict[str, Any]) -> list[dict[str, Any]]:
         # in_world=False means the current world has no node with that id. It is not a claim that it is safe.

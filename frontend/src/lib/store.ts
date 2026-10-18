@@ -8,6 +8,11 @@ import type { LiveAlert, NodeStatus, Places, Recording, ReplayMeta, RunEvent, Ru
 
 /* ---------- the agent's journey, as the sidebar shows it ---------- */
 export type Mode = 'scripted' | 'replay' | 'mcp' | 'api'
+export type Experience = 'guided' | 'free' | null
+
+// The visitor's choice survives a reload; private windows or blocked storage simply ask again.
+const saved = (k: string): string | null => { try { return localStorage.getItem(k) } catch { return null } }
+const save = (k: string, v: string | null) => { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v) } catch { /* storage unavailable */ } }
 export type StepId = 'detect' | 'trace' | 'impact' | 'options' | 'simulate' | 'approve' | 'verify'
 export const STEPS: { id: StepId; num: string; title: string; tools: string[] }[] = [
   { id: 'detect', num: '01', title: 'Detect', tools: ['resolve_entities', 'declare_incident'] },
@@ -82,9 +87,13 @@ interface State {
   scenarios: Scenario[]
   /** false when the server has no ANTHROPIC_API_KEY, so Claude API mode cannot run */
   claudeApi: boolean
-  /** guided tour: the step on screen, or null when it is closed */
-  tour: number | null
-  setTour: (step: number | null) => void
+  /** how the visitor chose to use the war room: a guided path, everything open, or not chosen yet */
+  experience: Experience
+  /** guided path: the step on screen, and the furthest step reached (what is unlocked) */
+  guideStep: number
+  guideMax: number
+  setExperience: (e: Experience) => void
+  setGuideStep: (step: number) => void
   /** true when /mcp needs MCP_API_KEY, so the Claude Code guide shows where the key goes */
   mcpKey: boolean
   places: Places | null
@@ -329,7 +338,20 @@ function initialTheme(): 'light' | 'dark' {
 
 export const useStore = create<State>((set, get) => ({
   graph: null, summary: null, scenarios: [], claudeApi: true, mcpKey: true, places: null, scenario: 'monsoon', mode: 'scripted', theme: initialTheme(),
-  tour: null, setTour: (tour) => set({ tour }),
+  experience: saved('domino-experience') as Experience,
+  guideStep: Number(saved('domino-guide-step') ?? 0) || 0,
+  guideMax: Number(saved('domino-guide-max') ?? 0) || 0,
+  setExperience: (experience) => {
+    save('domino-experience', experience)
+    set({ experience })
+  },
+
+  setGuideStep: (guideStep) => {
+    const guideMax = Math.max(get().guideMax, guideStep)
+    save('domino-guide-step', String(guideStep))
+    save('domino-guide-max', String(guideMax))
+    set({ guideStep, guideMax })
+  },
   replays: [], replayId: null, recording: null,
   runId: null, runStatus: 'idle', events: [], steps: [], pendingDecision: null, selected: null, hoverEvidence: null,
   error: null, busy: false, ready: false, derived: EMPTY,

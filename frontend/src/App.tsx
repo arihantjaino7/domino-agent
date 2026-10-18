@@ -4,7 +4,8 @@ import { ChainView } from './components/ChainView'
 import { FactoriesView } from './components/FactoriesView'
 import { OverviewView } from './components/OverviewView'
 import { ShipmentsView } from './components/ShipmentsView'
-import { Tour, TourInvite } from './components/Tour'
+import { ExperienceSwitch, Guide, Welcome } from './components/Guide'
+import { viewFresh, viewOpen } from './lib/guide'
 import { XrayView } from './components/XrayView'
 import { useModel } from './lib/model'
 import { Toasts } from './lib/motion'
@@ -24,6 +25,8 @@ const ICON: Record<ViewId, React.ReactNode> = {
   agent: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><rect x="3" y="4" width="7" height="6" rx="1.5" /><rect x="14" y="14" width="7" height="6" rx="1.5" /><path d="M10 7h3a3 3 0 0 1 3 3v4" /><path d="M8 20h-1a4 4 0 0 1-4-4v-1" opacity=".5" /></svg>,
 }
 
+const LOCK = <svg className="lock" viewBox="0 0 12 12" aria-hidden><rect x="2.5" y="5.5" width="7" height="5" rx="1.2" fill="currentColor" /><path d="M4 5.5V4a2 2 0 0 1 4 0v1.5" fill="none" stroke="currentColor" strokeWidth="1.3" /></svg>
+
 const viewFromHash = (): ViewId => {
   const h = location.hash.slice(1)
   return (VIEWS.some(([id]) => id === h) ? h : 'overview') as ViewId
@@ -33,7 +36,11 @@ const viewFromHash = (): ViewId => {
 export default function App() {
   const load = useStore((s) => s.load)
   const error = useStore((s) => s.error)
+  const experience = useStore((s) => s.experience)
+  const guideStep = useStore((s) => s.guideStep)
+  const guideMax = useStore((s) => s.guideMax)
   const [view, setView] = useState<ViewId>(viewFromHash)
+  const open = (v: ViewId) => viewOpen(v, experience, guideMax)
   useEffect(() => {
     document.documentElement.dataset.theme = 'dark'
     void load()
@@ -46,6 +53,10 @@ export default function App() {
     setView(v)
     window.scrollTo({ top: 0 })
   }
+  // A locked view (typed into the address bar, or left over from the full version) falls back to the Overview.
+  const shown: ViewId = open(view) ? view : 'overview'
+  const navClass = (id: ViewId) => [shown === id ? 'on' : '', open(id) ? '' : 'locked', viewFresh(id, experience, guideStep) ? 'fresh' : ''].join(' ').trim()
+  const navTitle = (id: ViewId, t: string) => (open(id) ? t : `${t}: opens later in the guide`)
   return (
     <>
       <div className="app">
@@ -53,46 +64,46 @@ export default function App() {
           <div className="logo" aria-hidden><span /><span /></div>
           <nav className="rail-nav">
             {VIEWS.map(([id, t]) => (
-              <button key={id} type="button" className={view === id ? 'on' : ''} title={t} aria-label={t} aria-current={view === id ? 'page' : undefined} onClick={() => go(id)}>{ICON[id]}</button>
+              <button key={id} type="button" className={navClass(id)} title={navTitle(id, t)} aria-label={navTitle(id, t)} aria-current={shown === id ? 'page' : undefined} disabled={!open(id)} onClick={() => go(id)}>{ICON[id]}{!open(id) && LOCK}</button>
             ))}
           </nav>
           <div className="rail-foot"><div className="avatar" title="Approver: war room">WR</div></div>
         </aside>
         <div className="main">
-          <TopBar view={view} go={go} />
-          <section className="view on" key={view}>
+          <TopBar go={go} navClass={navClass} navTitle={navTitle} open={open} />
+          <section className="view on" key={shown}>
             {error && <div className="banner" role="alert">{error}</div>}
-            {view === 'overview' && <OverviewView go={go} />}
-            {view === 'chain' && <ChainView />}
-            {view === 'factories' && <FactoriesView />}
-            {view === 'shipments' && <ShipmentsView />}
-            {view === 'xray' && <XrayView go={go} />}
-            {view === 'agent' && <AgentView />}
+            {shown === 'overview' && <OverviewView go={go} />}
+            {shown === 'chain' && <ChainView />}
+            {shown === 'factories' && <FactoriesView />}
+            {shown === 'shipments' && <ShipmentsView />}
+            {shown === 'xray' && <XrayView go={go} />}
+            {shown === 'agent' && <AgentView />}
           </section>
           <footer className="concept-note">DOMINO: a supply-chain recovery agent on FalkorDB. Every number here comes from a graph engine result or the API.</footer>
         </div>
       </div>
       <nav className="bottom-nav" aria-label="Views">
         {VIEWS.map(([id, t]) => (
-          <button key={id} type="button" className={view === id ? 'on' : ''} onClick={() => go(id)}>
-            {ICON[id]}
+          <button key={id} type="button" className={navClass(id)} title={navTitle(id, t)} disabled={!open(id)} onClick={() => go(id)}>
+            {ICON[id]}{!open(id) && LOCK}
             <span>{t}</span>
           </button>
         ))}
       </nav>
-      <Tour go={go} />
-      <TourInvite />
+      <Guide view={shown} go={go} />
+      <Welcome />
       <Toasts />
     </>
   )
 }
 
-function TopBar({ view, go }: { view: ViewId; go: (v: ViewId) => void }) {
+function TopBar({ go, navClass, navTitle, open }: { go: (v: ViewId) => void; navClass: (v: ViewId) => string; navTitle: (v: ViewId, t: string) => string; open: (v: ViewId) => boolean }) {
   const m = useModel()
   const mode = useStore((s) => s.mode)
   const setMode = useStore((s) => s.setMode)
   const busy = useStore((s) => s.busy)
-  const setTour = useStore((s) => s.setTour)
+  const guided = useStore((s) => s.experience === 'guided')
   const working = m.phase === 'running' || m.phase === 'approving' || busy
   const inc = m.d.declared?.incident_id
   const summaryIncidents = useStore((s) => s.summary?.incidents?.length ?? 0)
@@ -115,16 +126,16 @@ function TopBar({ view, go }: { view: ViewId; go: (v: ViewId) => void }) {
       </div>
       <nav className="tabs" aria-label="Views">
         {VIEWS.map(([id, t]) => (
-          <button key={id} type="button" className={view === id ? 'on' : ''} onClick={() => go(id)}>{t}</button>
+          <button key={id} type="button" className={navClass(id)} title={open(id) ? undefined : navTitle(id, t)} disabled={!open(id)} onClick={() => go(id)}>{!open(id) && LOCK}{t}</button>
         ))}
       </nav>
       <div className="top-right">
-        <div className="seg" role="group" aria-label="Who runs the agent">
+        <ExperienceSwitch />
+        {!guided && <div className="seg" role="group" aria-label="Who runs the agent">
           {MODES.map(([v, t, title]) => (
             <button key={v} type="button" className={mode === v ? 'on' : ''} title={title} disabled={working} onClick={() => setMode(v)}>{t}</button>
           ))}
-        </div>
-        <button type="button" className="tour-open" title="A one-minute guided tour" onClick={() => setTour(0)}>Tour</button>
+        </div>}
         <span className="run-state">
           <i className={`dot st-${state[0]} ${m.phase === 'awaiting' || m.phase === 'running' ? 'pulse' : ''}`} />
           {mode === 'replay' && m.phase !== 'idle' ? `Replay · ${state[1]}` : state[1]}
