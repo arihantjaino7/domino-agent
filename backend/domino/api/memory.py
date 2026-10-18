@@ -1,4 +1,4 @@
-"""Memory tab: what DOMINO remembers from past incidents, each item with the date it was learned.
+"""Memory tab: what DOMINO remembers from past incidents and deliveries, each item with the date it was learned.
 
 Real runs write to `memory`; scripted Demo runs write to `memory:dryrun`, so the caller picks which one to read.
 Only those two graphs can be read here; the name is never taken from the request.
@@ -13,6 +13,7 @@ from fastapi import APIRouter
 
 from domino.agent import memory
 from domino.config import settings
+from domino.engines.delivery import learned_for
 
 router = APIRouter(prefix="/api")
 
@@ -38,6 +39,8 @@ def _memory(source: str) -> dict[str, Any]:
         "incidents": [{**r, "entities": ents(r)} for r in incidents],
         "lessons": [{**r, "entities": ents(r)} for r in lessons],
         "counts": {"incidents": len(incidents), "lessons": len(lessons)},
+        # Supplier reliability learned from delivery facts, against the current world's seeded value.
+        "reliability": learned_for(settings.world_graph_live, g),
     }
 
 

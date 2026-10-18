@@ -281,3 +281,11 @@ async def submit_incident_report(
     tools did not return, or names an entity that is not on its cited paths; fix and resubmit."""
     return await _call(T.submit_incident_report, run_id, headline=headline, outcome=outcome, claims=claims,
                        decision_id=decision_id, open_risks=open_risks, lessons=lessons)
+
+
+@mcp.tool()
+async def get_delivery_outcomes(run_id: RunId = "") -> dict:
+    """Read-only: how executed purchase orders were actually delivered (on time or N days late, and which orders
+    were fulfilled), once a human has fast-forwarded the war room to delivery, plus the supplier reliability
+    DOMINO learned from those deliveries. Learned reliability survives a world reset and changes later plans."""
+    return await _call(T.get_delivery_outcomes, run_id)

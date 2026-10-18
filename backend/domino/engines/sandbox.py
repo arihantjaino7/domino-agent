@@ -3,13 +3,15 @@
 For each strategy: GRAPH.COPY the live world to `sandbox:<run>:<S>`, apply the plan with the SAME
 executor code used for real execution, project shortages there (committed POs arrive at the rate the
 upstream can jointly support, after proportional rationing), run the verifier, then drop the fork.
+With `memory_graph`, the balanced preset ranks sources by the reliability learned from past deliveries;
+the result lists each learned value and the ranking it changed. Same world and memory, same result.
 """
 
 from __future__ import annotations
 
 from typing import Any
 
-from domino.allocators.greedy import allocate, build_problem
+from domino.allocators.greedy import allocate, build_problem, reliability_effects
 from domino.allocators.strategies import DEFAULT_BUDGET_CENTS, PRESETS, RECOMMENDED
 from domino.engines.executor import approve_decision, execute_plan, propose_decision
 from domino.engines.shortage import project_shortages
@@ -55,8 +57,9 @@ def score(projection: dict[str, Any], baseline: dict[str, Any], plan: dict[str, 
 
 
 def simulate_strategies(live: str, incident_id: str, run_id: str = "local", horizon: int = 42,
-                        budget_cents: int = DEFAULT_BUDGET_CENTS, strategies: list[str] | None = None) -> dict[str, Any]:
-    problem = build_problem(live, horizon, budget_cents, run_id=run_id)
+                        budget_cents: int = DEFAULT_BUDGET_CENTS, strategies: list[str] | None = None,
+                        memory_graph: str | None = None) -> dict[str, Any]:
+    problem = build_problem(live, horizon, budget_cents, run_id=run_id, memory_graph=memory_graph)
     version = world_version(live)
     baseline = problem["baseline"]
     rows, plans = [], {}
@@ -82,4 +85,5 @@ def simulate_strategies(live: str, incident_id: str, run_id: str = "local", hori
                      "verification": {"ok": verification["ok"], "failed": verification["failed"],
                                       "checks": verification["checks"]}})
     return {"incident_id": incident_id, "world_version": version, "budget_cents": budget_cents,
-            "recommended": RECOMMENDED, "strategies": rows, "plans": plans}
+            "recommended": RECOMMENDED, "strategies": rows, "plans": plans,
+            "learned_reliability": problem["learned"], "ranking_changes": reliability_effects(problem)}

@@ -18,6 +18,8 @@ from domino.agent import memory
 from domino.agent.context import ANY_ID, GUARDED_ID, RunContext
 from domino.allocators.greedy import content_hash, rekey
 from domino.allocators.strategies import PRESETS
+from domino.config import settings
+from domino.engines import delivery as _delivery
 from domino.engines.alternatives import find_alternatives as _find_alternatives
 from domino.engines.capacity import compute_true_capacity as _true_capacity
 from domino.engines.executor import propose_decision, reject_decision
@@ -146,10 +148,18 @@ def get_entity_context(ctx: RunContext, entity_id: str) -> dict[str, Any]:
 
 def recall_history(ctx: RunContext, entity_ids: list[str]) -> dict[str, Any]:
     rows = memory.recall_history(entity_ids, graph=ctx.memory_graph)
-    summary = {"memories": rows, "outcome": "answered_from_memory" if rows else "nothing_remembered",
-               "note": "Each memory carries the date it was learned (learned_on)."}
-    ctx.add_result("recall_history", summary, {"memories": rows})
+    learned = _delivery.learned_for(ctx.graph, ctx.memory_graph, entity_ids)
+    summary = {"memories": rows, "outcome": "answered_from_memory" if rows or learned else "nothing_remembered",
+               "learned_reliability": [_learned_row(r) for r in learned],
+               "note": "Each memory carries the date it was learned (learned_on). learned_reliability comes from how "
+                       "past purchase orders were delivered; simulate_strategies ranks sources by it."}
+    ctx.add_result("recall_history", summary, {"memories": rows, "learned_reliability": learned})
     return summary
+
+
+def _learned_row(r: dict[str, Any]) -> dict[str, Any]:
+    return {"site": r["site"], "seeded": r["seeded"], "learned": r["learned"], "deliveries": r["deliveries"],
+            "on_time": r["on_time"], "learned_on": r["learned_on"], "why": r["text"]}
 
 
 # ---------------------------------------------------------------------------
@@ -253,7 +263,8 @@ def simulate_strategies(ctx: RunContext, budget_usd: int | None = None) -> dict[
     if not ctx.incident_id:
         raise ToolInputError("declare the incident first")
     budget = budget_usd * 100 if budget_usd else ctx.budget_cents
-    sim = _simulate(ctx.graph, ctx.incident_id, run_id=ctx.run_id, horizon=HORIZON, budget_cents=budget)
+    sim = _simulate(ctx.graph, ctx.incident_id, run_id=ctx.run_id, horizon=HORIZON, budget_cents=budget,
+                    memory_graph=ctx.memory_graph)
     ctx.plans = sim["plans"]
     rows = []
     for r in sim["strategies"]:
@@ -272,6 +283,11 @@ def simulate_strategies(ctx: RunContext, budget_usd: int | None = None) -> dict[
         })
     summary = {"budget_usd": _usd(budget), "strategies": rows, "default_recommendation": sim["recommended"],
                "note": "each plan was executed in its own GRAPH.COPY sandbox with joint upstream rationing"}
+    if sim["learned_reliability"]:  # memory changed the inputs: say how, so the plan can be explained
+        summary["learned_reliability"] = [_learned_row(r) for r in sim["learned_reliability"]]
+        summary["ranking_changes"] = [c["text"] for c in sim["ranking_changes"]]
+        summary["memory_note"] = ("S4 ranks sources by cost x (2 - reliability); these reliabilities were learned from "
+                                  f"past deliveries in {ctx.memory_graph} instead of the seeded values")
     ctx.add_result("simulate_strategies", summary, {k: v for k, v in sim.items() if k != "plans"})
     return summary
 
@@ -328,6 +344,9 @@ def submit_plan_for_approval(ctx: RunContext, strategy_id: str, rationale: str,
                "purchase_orders": len(plan["pos"]), "orders_to_protect": len(plan["protected_orders"]),
                "next": "A human now approves or rejects in the DOMINO war room. Wait for them; "
                        "get_decision_status tells you the outcome."}
+    if plan.get("learned_reliability"):
+        summary["learned_reliability"] = [r["text"] for r in plan["learned_reliability"]]
+        summary["ranking_changes"] = [c["text"] for c in plan.get("ranking_changes", [])]
     ctx.add_result("submit_plan_for_approval", summary, {"plan": plan, "rationale": rationale})
     return summary
 
@@ -431,6 +450,48 @@ def record_lessons(ctx: RunContext, incident_id: str, lessons: list[dict[str, An
                "graph": ctx.memory_graph}
     ctx.add_result("record_lessons", summary, summary)
     return summary
+
+
+# ---------------------------------------------------------------------------
+# Delivery and learned reliability
+# ---------------------------------------------------------------------------
+
+def get_delivery_outcomes(ctx: RunContext) -> dict[str, Any]:
+    """Read-only: how this world's purchase orders were delivered, and the reliability memory learned from it."""
+    pos = _delivery.delivered(ctx.graph)
+    learned = _delivery.learned_for(ctx.graph, ctx.memory_graph)
+    rows = [{"po_id": p["po_id"], "site": p["site"], "component": p["component"], "plant": p["plant"],
+             "status": p["status"], "planned_day": p["planned_day"], "arrived_day": p["arrived_day"],
+             "days_late": p["days_late"],
+             "orders": {k: sum(o["status"] == k for o in p["orders"])
+                        for k in ("fulfilled", "fulfilled_late", "unfulfilled")}} for p in pos]
+    summary = {"delivered_pos": rows, "learned_reliability": [_learned_row(r) for r in learned],
+               "outcome": "delivered" if rows else "nothing_delivered_yet",
+               "note": ("Delivery is simulated only when a human fast-forwards to delivery in the DOMINO war room. "
+                        "'fulfilled' means the parts arrived by the order's need day. learned_reliability is kept in "
+                        f"{ctx.memory_graph} and survives a world reset; simulate_strategies uses it.")}
+    ctx.add_result("get_delivery_outcomes", summary, {"pos": pos, "learned_reliability": learned})
+    return summary
+
+
+def record_delivery(ctx: RunContext) -> dict[str, Any]:
+    """The human fast-forwarded the war room to delivery: simulate it in the world, then remember how each
+    supplier performed. Not an agent tool; only the war room calls it, after the plan was executed and verified."""
+    if not ctx.receipt or ctx.receipt.get("outcome") != "executed":
+        raise ValueError("nothing was executed in this run, so nothing is on its way")
+    if not any(u.get("tool") == "verify_execution" for u in ctx.ui.values()):
+        raise ValueError("verify the execution first (verify_execution), then fast-forward")
+    if ctx.delivery is not None:
+        raise ValueError("this run's purchase orders were already delivered")
+    res = _delivery.fast_forward(ctx.graph, settings.world_seed)
+    if res["outcome"] != "delivered":
+        raise ValueError(f"{res['outcome']}: {res.get('detail', '')}".strip(": "))
+    names = memory.entity_names(sorted({p["site"] for p in res["pos"]}), ctx.graph)
+    res["memory_facts"] = memory.record_deliveries(ctx.run_id, res["pos"], names, graph=ctx.memory_graph)
+    res["memory_graph"] = ctx.memory_graph
+    res["learned_reliability"] = _delivery.learned_for(ctx.graph, ctx.memory_graph, [p["site"] for p in res["pos"]])
+    ctx.delivery = res
+    return res
 
 
 # Fields that name a list item, so a ref can say R-10.strategies.S4 instead of R-10.strategies.4.
@@ -637,6 +698,7 @@ CATALOGUE = [
     simulate_strategies, flag_orders_at_risk, submit_plan_for_approval, get_decision_status, verify_execution,
     record_lessons,
     submit_incident_report,
+    get_delivery_outcomes,
 ]
 GATES = {"submit_plan_for_approval"}
 STRATEGIES = sorted(PRESETS)

@@ -35,6 +35,7 @@ class RunContext:
     plans: dict[str, dict[str, Any]] = field(default_factory=dict)       # strategy -> plan
     pending: dict[str, Any] | None = None                                # plan awaiting approval
     receipt: dict[str, Any] | None = None
+    delivery: dict[str, Any] | None = None                              # fast-forward result, once delivered
     report: dict[str, Any] | None = None
     rejected: dict[str, str] = field(default_factory=dict)              # decision id -> human feedback
     rejected_plans: dict[str, str] = field(default_factory=dict)        # content hash of a rejected plan -> feedback

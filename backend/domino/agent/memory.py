@@ -1,6 +1,7 @@
 """Institutional memory in the separate `memory` graph, which survives world resets.
 
-Memory is more nodes, returned with the date it was learned.
+Memory is more nodes, returned with the date it was learned. Delivery facts (how a supplier's purchase
+orders actually arrived) are memory too: the allocator learns each site's reliability from them.
 """
 
 from __future__ import annotations
@@ -50,6 +51,22 @@ def record_lessons(incident_id: str, lessons: list[dict[str, Any]], graph: str |
     if rows:
         run_query("memory/write_lessons", {"lessons": rows}, ro=False, graph=g)
     return [r["id"] for r in rows]
+
+
+def record_deliveries(run_id: str, pos: list[dict[str, Any]], names: dict[str, dict[str, Any]],
+                      graph: str | None = None) -> int:
+    """One Delivery fact per received PO (from engines.delivery.fast_forward), linked to its source site.
+    Keyed by run and PO id, so the same delivery recorded twice is stored once."""
+    today = _today()
+    rows = [{"id": f"{run_id}:{p['po_id']}", "po_id": p["po_id"], "run_id": run_id, "decision_id": p["decision_id"],
+             "site": p["site"], "kind": (names.get(p["site"]) or {}).get("kind") or "Site",
+             "name": (names.get(p["site"]) or {}).get("name") or p["site"], "component": p["component"],
+             "plant": p["plant"], "planned_day": p["first_arrival_day"], "arrived_day": p["arrived_day"],
+             "days_late": p["days_late"], "learned_on": today} for p in pos]
+    if not rows:
+        return 0
+    out = run_query("memory/write_deliveries", {"deliveries": rows}, ro=False, graph=graph or settings.memory_graph)
+    return out[0]["linked"] if out else 0
 
 
 def _exists(graph: str) -> bool:
