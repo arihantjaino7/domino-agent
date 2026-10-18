@@ -112,13 +112,14 @@ function TopBar({ go, navClass, navTitle, open }: { go: (v: ViewId) => void; nav
     m.phase === 'idle' ? (summaryIncidents ? ['covered', 'Earlier disruption in this world'] : ['none', 'No disruption']) : m.phase === 'running' && mode === 'mcp' && m.steps.length === 0 ? ['covered', 'Waiting for Claude Code']
       : m.phase === 'running' ? ['covered', 'DOMINO is working'] : m.phase === 'awaiting' ? ['covered', 'Waiting for your OK']
       : m.phase === 'approving' ? ['covered', 'Placing the orders'] : m.phase === 'failed' ? ['disrupted', 'Run stopped'] : m.executed ? ['protected', 'Plan approved and checked'] : ['protected', 'Run complete']
+  const runText = mode === 'replay' && m.phase !== 'idle' ? `Replay · ${state[1]}` : state[1]
   const MODES: [Mode, string, string][] = [['scripted', 'Demo', 'Free offline demo run'], ['replay', 'Replay', 'Watch a recorded run: free, and nothing in the graph changes'], ['mcp', 'Claude Code', 'Claude Code drives DOMINO over MCP; you watch here'], ['api', 'Claude API', 'Claude runs in the backend (paid)']]
   return (
-    <header className="top">
+    <header className={`top ${guided ? '' : 'full'}`}>
       <div className="top-left">
         <span className="word">DOMINO</span>
         {inc && (
-          <span className="inc-pill">
+          <span className="inc-pill" title={m.d.alert ?? undefined}>
             <i className="dot st-disrupted pulse" />
             <b className="mono">{inc}</b>
             <span>{m.d.alert ?? ''}</span>
@@ -137,9 +138,9 @@ function TopBar({ go, navClass, navTitle, open }: { go: (v: ViewId) => void; nav
             <button key={v} type="button" className={mode === v ? 'on' : ''} title={title} disabled={working} onClick={() => setMode(v)}>{t}</button>
           ))}
         </div>}
-        <span className="run-state">
+        <span className="run-state" title={runText}>
           <i className={`dot st-${state[0]} ${m.phase === 'awaiting' || m.phase === 'running' ? 'pulse' : ''}`} />
-          {mode === 'replay' && m.phase !== 'idle' ? `Replay · ${state[1]}` : state[1]}
+          {runText}
         </span>
       </div>
     </header>
