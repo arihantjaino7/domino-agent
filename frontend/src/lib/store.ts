@@ -157,7 +157,9 @@ export function derive(graph: WorldGraph | null, summary: Summary | null, steps:
   d.declared = lastUi(steps, 'declare_incident')
   const trace = lastUi(steps, 'trace_exposure')
   d.trace = trace
-  d.alert = events.find((e) => e.type === 'run.started')?.data.alert ?? null
+  // A Claude Code (MCP) run starts without the alert text; then the incident title it declared stands in.
+  d.alert = events.find((e) => e.type === 'run.started')?.data.alert
+    ?? (steps.find((s) => s.tool === 'declare_incident')?.args.title as string | undefined) ?? null
   d.kind = (steps.find((s) => s.tool === 'declare_incident')?.args.kind as string | undefined) ?? null
   const rl = [...steps].reverse().find((s) => s.tool === 'record_lessons' && s.state === 'ok')
   d.lessons = ((rl?.args.lessons as { text: string }[] | undefined) ?? []).filter((l) => l?.text)
