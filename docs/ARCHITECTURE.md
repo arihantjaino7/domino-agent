@@ -34,7 +34,7 @@ flowchart LR
 
 ## Engines and allocators
 
-`backend/domino/engines/` computes incidents, exposure, shortages, max-flow capacity, alternatives, sandbox results and verification without an LLM. `allocators/greedy.py` allocates complete component coverage using a strategy preset and, in graph-aware modes, upstream capacity bookkeeping. `engines/sandbox.py` forks the live graph, executes each candidate through the same executor, scores it, verifies it and deletes the fork. `engines/executor.py` checks approval and preflight before the atomic write. `agent/memory.py` writes remembered incidents and lessons through named queries.
+`backend/domino/engines/` computes incidents, exposure, shortages, max-flow capacity, alternatives, sandbox results and verification without an LLM. `allocators/greedy.py` allocates complete component coverage using a strategy preset and, in graph-aware modes, upstream capacity bookkeeping. `engines/sandbox.py` forks the live graph, executes each candidate through the same executor, scores it, verifies it and deletes the fork. `engines/executor.py` checks approval and preflight before the atomic write. `agent/memory.py` writes remembered incidents, lessons and delivery facts through named queries. `engines/delivery.py` fast-forwards executed purchase orders to delivery and computes the supplier reliability learned from past deliveries, which `allocators/greedy.py` uses for the balanced strategy.
 
 ## Query runner
 

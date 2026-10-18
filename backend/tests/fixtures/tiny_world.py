@@ -26,10 +26,11 @@ from __future__ import annotations
 from domino.seed.world import World
 
 
-def _site(w: World, sid: str, region: str, tier: int, makes: str, buffer_days: int = 0, cap: int = 1000) -> None:
+def _site(w: World, sid: str, region: str, tier: int, makes: str, buffer_days: int = 0, cap: int = 1000,
+          operator: str = "SUP-X") -> None:
     w.add_node("Site", id=sid, name=f"Site {sid}", kind="line", tier=tier, capacity_wk=cap, unit="pcs",
                capacity_factor=1.0, status="active", input_buffer_days=buffer_days, lat=0.0, lng=0.0, aliases=sid)
-    w.add_edge("OPERATES", "SUP-X", sid)
+    w.add_edge("OPERATES", operator, sid)
     w.add_edge("LOCATED_IN", sid, region)
     w.add_edge("MAKES", sid, makes, unit_price_cents=100)
 
@@ -116,4 +117,39 @@ def shared_line_world() -> World:
     _product(w, "P6", "PL-Y", {"C-6S": 1})
     _order(w, "SO-41", "CU-N", "P4", "PL-Y", 50, 9)
     _order(w, "SO-61", "CU-N", "P6", "PL-Y", 60, 9)
+    return w
+
+
+def learning_world() -> World:
+    """Memory that changes plans: two clean alternates, and the seeded favourite is the one that slips.
+
+    Z-T (flood, 28 days) <- R-T1 <- S-MAIN --C-MOD 70/wk (10/day), transit 0--> PL-L   (stock C-MOD 0)
+    Alternates for C-MOD at PL-L, no inputs (clean), lead 18 + sea 2 = arrival day 20:
+      S-A  (SUP-A, reliability 0.95)  $1.00/unit, spare 70/wk
+      S-B  (SUP-B, reliability 0.90)  $1.05/unit, spare 140/wk
+    Order SO-L1: 110 x PR-L (1 C-MOD each), need day 30. Do nothing: S-MAIN is back on day 28,
+      10/day -> 110 on day 38 -> 8 days late.
+
+    Balanced ranking, cost x (2 - reliability), seeded: S-A 100 x 1.05 = 105 < S-B 105 x 1.10 = 115.5 -> 116.
+      Rate for 110 by day 30 from day 20: ceil(7 x 110 / 11) = 70/wk = all of S-A's spare -> surge 100%.
+    Delivery: risk = (1 - 0.95) + (1 - 0.6) = 0.45; 20 x 0.45 = 9 exactly, so 9 days late for any seed.
+      The PO now arrives day 29 (10/day); with S-MAIN's 10/day from day 28 the order is ready on day 33:
+      10 x (33 - 28) + 10 x (33 - 27) = 110 -> fulfilled 3 days late. Last PO unit: 29 - 1 + ceil(770/70) = day 39.
+    Learned: S-A (0.95 + (1 - 9/14)) / 2 = 0.6536 -> 0.65. Ranking now: S-A 100 x 1.35 = 135 > S-B 116 -> S-B first.
+    """
+    w = World(seed=0)
+    _base(w, "PL-L", ["C-MOD"])
+    w.add_node("Supplier", id="SUP-A", name="Alpha Parts", hq_country="XX", reliability=0.95)
+    w.add_node("Supplier", id="SUP-B", name="Beta Parts", hq_country="XX", reliability=0.9)
+    _site(w, "S-MAIN", "R-T1", 1, "C-MOD")
+    _site(w, "S-A", "R-T2", 1, "C-MOD", operator="SUP-A")
+    _site(w, "S-B", "R-T2", 1, "C-MOD", operator="SUP-B")
+    w.add_edge("SUPPLIES", "S-MAIN", "PL-L", component_id="C-MOD", used_wk=70, unit_price_cents=100, transit_days=0)
+    w.add_edge("CAN_SUPPLY", "S-A", "PL-L", component_id="C-MOD", spare_wk=70, unit_price_cents=100,
+               lead_days=18, transit_days=2, moq=10, qualified=True, air_transit_days=1, air_surcharge_cents=50)
+    w.add_edge("CAN_SUPPLY", "S-B", "PL-L", component_id="C-MOD", spare_wk=140, unit_price_cents=105,
+               lead_days=18, transit_days=2, moq=10, qualified=True, air_transit_days=1, air_surcharge_cents=50)
+    w.add_edge("STOCKS", "PL-L", "C-MOD", on_hand=0, safety=0)
+    _product(w, "PR-L", "PL-L", {"C-MOD": 1})
+    _order(w, "SO-L1", "CU-N", "PR-L", "PL-L", 110, 30)
     return w

@@ -27,11 +27,11 @@ Seeded properties below are collected from `backend/domino/seed/generator.py` an
 | `Component` | `family`, `id`, `name`, `unit`, `unit_cost_cents`. |
 | `Product` | `build_days`, `id`, `name`, `unit_price_cents`. |
 | `Customer` | `country`, `id`, `name`, `penalty_per_day_cents`, `tier`. |
-| `Order` | `due_day`, `id`, `need_day`, `qty`, `risk_flag`, `status`, `value_cents`. Runtime adds `risk_reason`; status may become `protected_projected`. |
+| `Order` | `due_day`, `id`, `need_day`, `qty`, `risk_flag`, `status`, `value_cents`. Runtime adds `risk_reason`; status may become `protected_projected`, then after a fast-forward to delivery `fulfilled`, `fulfilled_late` or `unfulfilled` with `delivered_day` and `late_days`. |
 | `Meta` | `id`, `world_version`, `seed`, `fingerprint`. Created by `queries/seed/meta.cypher`; incident declaration and execution increment the version. |
 | `Incident` | `id`, `kind`, `title`, `alert_text`, `started_day`, `expected_end_day`, `severity`, `status` (`open`). |
 | `Decision` | `id`, `strategy`, `status`, `plan_hash`, `world_version`, `budget_cents`, `rationale`; approval adds `approved_by`, execution adds `executed_day`, rejection adds `rejected_by` and `feedback`. Writers set `proposed`, then `approved` and `executed`, or `rejected`. A plan re-submitted after a rejection gets a revision id (`DEC-...-v1-r2`). |
-| `PurchaseOrder` | `id`, `qty`, `rate_wk`, `unit_price_cents`, `mode`, `first_arrival_day`, `status` (`committed`), `created_by` (`domino`). IDs are deterministic in `allocators/greedy.py`. |
+| `PurchaseOrder` | `id`, `qty`, `rate_wk`, `unit_price_cents`, `mode`, `first_arrival_day`, `status` (`committed`), `created_by` (`domino`). IDs are deterministic in `allocators/greedy.py`. A fast-forward to delivery sets `status` to `received` or `delayed` and adds `days_late`, `arrived_day` and `received_day` (`engines/delivery.py`). |
 | `Action` | `id`, `type` (`execute`), `actor` (`executor`), `day`, `payload_json`. |
 
 Purchase orders protect orders **(projected)**. They do not establish that parts have arrived. Runtime fields come from `queries/incident/declare.cypher`, `agent/flag_orders.cypher`, `decision/*.cypher` and `execute/write.cypher`.
@@ -115,8 +115,10 @@ graph LR
 | `Lesson` | `id` (`L-<memory incident>-<n>`), `text`, `incident_id` (the memory incident), `learned_on`, `evidence` (a string of evidence IDs). The same text sent twice for one incident is stored once. |
 | `(Incident)-[:INVOLVED]->(Entity)` | `role` |
 | `(Lesson)-[:ABOUT]->(Entity)` | — |
+| `Delivery` | `id` (`<run id>:<PO id>`), `po_id`, `run_id`, `decision_id`, `component`, `plant`, `planned_day`, `arrived_day`, `days_late`, `learned_on`. One per delivered purchase order. |
+| `(Delivery)-[:OF]->(Entity)` | — (the source site) |
 
-`learned_on` is a calendar date, separate from integer simulation days. The recall query reads `Entity.reliability`, but no current memory writer sets it.
+`learned_on` is a calendar date, separate from integer simulation days. The recall query reads `Entity.reliability`, but no current memory writer sets it: learned reliability is computed from the `Delivery` facts and the world's seeded value each time it is used (`engines/delivery.py`).
 
 For max-flow, `queries/flow/load_nodes.cypher` creates `F {id}` nodes and `load_edges.cypher` creates `CAP {cap, cap_nominal}` edges in `scratch:flow:*`. Site nodes are split into input/output halves. Capacities are converted to units of the target component per week. `engines/capacity.py` deletes the scratch graph in `finally`. `sandbox:*` graphs copy the world model and are dropped after scoring by `engines/sandbox.py`.
 

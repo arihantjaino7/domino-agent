@@ -12,6 +12,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from mcp.server.transport_security import TransportSecuritySettings
 
+from domino.api.delivery import router as delivery_router
 from domino.api.memory import router as memory_router
 from domino.api.replays import router as replays_router
 from domino.api.runs import router as runs_router
@@ -83,6 +84,7 @@ app.include_router(world_router)
 app.include_router(memory_router)
 app.include_router(replays_router)
 app.include_router(xray_router)
+app.include_router(delivery_router)
 
 
 # HEAD too: uptime monitors (UptimeRobot's default) check with HEAD and would see 404 otherwise.

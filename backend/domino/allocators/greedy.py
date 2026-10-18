@@ -10,6 +10,10 @@
 An order is protected only if every part it is short of is fully covered; otherwise its tentative
 allocations are rolled back, so "protected (projected)" never means half-covered (invariant V7).
 
+Reliability (the balanced preset ranks by cost x (2 - reliability)) is the operator's seeded value, or the
+value learned from delivery facts in memory when there are any (engines.delivery). The plan lists every
+learned value it used and any source ranking it changed, so the result says why.
+
 Naive and graph-aware modes run this same code; only the candidate list and the capacity checks
 differ. That keeps the baseline-vs-DOMINO comparison fair. Greedy is not guaranteed optimal.
 """
@@ -23,6 +27,7 @@ from typing import Any
 
 from domino.allocators.strategies import DEFAULT_BUDGET_CENTS, PRESETS
 from domino.engines.alternatives import find_alternatives
+from domino.engines.delivery import DEFAULT_RELIABILITY, learned_for
 from domino.engines.shortage import project_shortages
 from domino.engines.upstream import Upstream, load_upstream, overloads
 
@@ -34,7 +39,7 @@ Key = tuple[str, str, str]  # (site, component, plant)
 # ---------------------------------------------------------------------------
 
 def build_problem(graph: str, horizon: int = 42, budget_cents: int = DEFAULT_BUDGET_CENTS,
-                  run_id: str = "local") -> dict[str, Any]:
+                  run_id: str = "local", memory_graph: str | None = None) -> dict[str, Any]:
     baseline = project_shortages(graph, horizon)
     reduced = {(c["plant"], c["component"]) for c in baseline["components"] if c["reduced"]}
     orders = []
@@ -55,8 +60,14 @@ def build_problem(graph: str, horizon: int = 42, budget_cents: int = DEFAULT_BUD
         candidates[f"{comp}|{plant}"] = sorted(rows, key=lambda r: r["site"])
     sites = sorted({c["site"] for rows in candidates.values() for c in rows})
     comps = sorted({c["component"] for rows in candidates.values() for c in rows})
+    up = load_upstream(graph, sites, comps)
+    priors = {s: up.source.get(s, {}).get("reliability") for s in sites}
+    learned = learned_for(graph, memory_graph, sites, priors) if memory_graph and sites else []
+    for row in learned:  # memory overrides the seeded value; the seeded one is kept for the explanation
+        up.source[row["site"]]["seeded_reliability"] = up.source[row["site"]]["reliability"]
+        up.source[row["site"]]["reliability"] = row["learned"]
     return {"graph": graph, "horizon": horizon, "budget_cents": budget_cents, "baseline": baseline,
-            "orders": orders, "candidates": candidates, "upstream": load_upstream(graph, sites, comps)}
+            "orders": orders, "candidates": candidates, "upstream": up, "learned": learned}
 
 
 # ---------------------------------------------------------------------------
@@ -93,15 +104,46 @@ def _pick_mode(c: dict[str, Any], need_day: int, air: str) -> str | None:
     return "air" if air == "when_needed" and air_ok else None
 
 
+def _balanced_score(c: dict[str, Any], mode: str, reliability: float | None) -> int:
+    return round(_unit_cost(c, mode) * (2 - (reliability or DEFAULT_RELIABILITY)) * (1.1 if c["tainted_paths"] else 1.0))
+
+
 def _rank(c: dict[str, Any], mode: str, key: str, up: Upstream) -> tuple:
     cost = _unit_cost(c, mode)
     if key == "speed":
         return (_arrival(c, mode), cost, c["site"])
     if key == "balanced":
-        reliability = up.source.get(c["site"], {}).get("reliability") or 0.9
-        score = cost * (2 - reliability) * (1.1 if c["tainted_paths"] else 1.0)
-        return (round(score), _arrival(c, mode), c["site"])
+        return (_balanced_score(c, mode, up.source.get(c["site"], {}).get("reliability")), _arrival(c, mode), c["site"])
     return (cost, c["site"])
+
+
+def reliability_effects(problem: dict[str, Any]) -> list[dict[str, Any]]:
+    """Where learned reliability changed which source the balanced preset tries first (ranked at sea rates)."""
+    up: Upstream = problem["upstream"]
+    if not problem.get("learned"):
+        return []
+
+    def ranked(rows: list[dict[str, Any]], seeded: bool) -> list[tuple[int, int, str]]:
+        def rel(site: str) -> float | None:
+            src = up.source.get(site, {})
+            return src.get("seeded_reliability", src.get("reliability")) if seeded else src.get("reliability")
+        return sorted((_balanced_score(c, "sea", rel(c["site"])), _arrival(c, "sea"), c["site"]) for c in rows)
+
+    out = []
+    for key, rows in sorted(problem["candidates"].items()):
+        rows = [c for c in rows if not c["naive_only"]]
+        if len(rows) < 2:
+            continue
+        now, before = ranked(rows, False), ranked(rows, True)
+        if now[0][2] != before[0][2]:
+            comp, plant = key.split("|")
+            was = next(r for r in now if r[2] == before[0][2])
+            out.append({"component": comp, "plant": plant, "first": now[0][2], "was_first": before[0][2],
+                        "score_cents": now[0][0], "was_first_score_cents": was[0],
+                        "text": f"{comp} for {plant}: {now[0][2]} is now tried first (reliability-weighted cost "
+                                f"${now[0][0] / 100:,.2f} vs ${was[0] / 100:,.2f} per unit for {before[0][2]}, "
+                                f"which came first with seeded reliability)"})
+    return out
 
 
 def allocate(problem: dict[str, Any], strategy: str, decision_id: str, world_version: int) -> dict[str, Any]:
@@ -193,6 +235,10 @@ def allocate(problem: dict[str, Any], strategy: str, decision_id: str, world_ver
             "world_version": world_version, "budget_cents": problem["budget_cents"], "pos": pos}
     plan["spend_cents"] = sum(p["qty"] * p["unit_price_cents"] for p in pos)
     plan["protected_orders"] = sorted({a["order_id"] for p in pos for a in p["allocations"]})
+    if preset.get("key") == "balanced" and problem.get("learned"):
+        used = {p["site_id"] for p in pos}
+        plan["learned_reliability"] = [{**r, "in_plan": r["site"] in used} for r in problem["learned"]]
+        plan["ranking_changes"] = reliability_effects(problem)
     plan["plan_hash"] = plan_hash(plan)
     return plan
 

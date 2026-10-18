@@ -46,7 +46,7 @@ Planned capabilities are marked so this table does not claim they already work.
 | Alert-to-entity resolution | Full-text search on `Place` | Alerts cannot be resolved through the current tools. | Implemented. |
 | What-if sandboxes | `GRAPH.COPY` | Strategies lose their isolated world copies. | Implemented. |
 | Reset and per-visitor worlds | `GRAPH.COPY` and multiple graphs | A fresh live world needs another reset mechanism. | Reset implemented; current browser runs share the live world. |
-| Memory across runs | Separate persistent memory graph | Remembered incidents and lessons disappear. | Implemented; scripted memory is separate. |
+| Memory across runs | Separate persistent memory graph | Remembered incidents, lessons and supplier delivery records disappear. | Implemented; scripted memory is separate. Learned supplier reliability changes the next plan. |
 | Read-only queries | `GRAPH.RO_QUERY` | Reads lose the database-enforced read-only path. | Implemented. |
 | Idempotent execution | Unique constraint on `PurchaseOrder.id` | Duplicate PO IDs lose their database guard. | Implemented with executor checks. |
 | Provenance | Linked incidents, decisions, POs and actions | Graph links behind the execution audit disappear. | Implemented links; evidence is in run results, without planned `CITES` links. |
@@ -114,9 +114,13 @@ The model chooses tools. Deterministic Python engines calculate results. A human
 
 The server is mounted at `/mcp`. It exposes these names from `backend/domino/mcp/server.py`:
 
-`health`, `resolve_entities`, `declare_incident`, `get_entity_context`, `recall_history`, `trace_exposure`, `explain_shared_dependencies`, `project_shortages`, `scan_single_points_of_failure`, `compute_true_capacity`, `find_alternatives`, `simulate_strategies`, `flag_orders_at_risk`, `submit_plan_for_approval`, `get_decision_status`, `verify_execution`, `record_lessons`, `submit_incident_report`.
+`health`, `resolve_entities`, `declare_incident`, `get_entity_context`, `recall_history`, `trace_exposure`, `explain_shared_dependencies`, `project_shortages`, `scan_single_points_of_failure`, `compute_true_capacity`, `find_alternatives`, `simulate_strategies`, `flag_orders_at_risk`, `submit_plan_for_approval`, `get_decision_status`, `verify_execution`, `record_lessons`, `submit_incident_report`, `get_delivery_outcomes`.
 
 `health` checks connectivity. The recovery tools validate IDs and return engine results. `execute_plan` is not exposed as an MCP tool. External clients propose a plan, wait for the human in the war room, then read its status.
+
+### Memory that learns
+
+After a plan is executed and verified, the war room's **Fast-forward to delivery** button runs the simulated clock until the purchase orders arrive. Each PO resolves to on time or N days late with a deterministic rule in `engines/delivery.py`: risk = (1 − the operator's seeded reliability) + how far the PO pushes its source past 60% of its approved spare, times the planned arrival day, rounded by a jitter seeded from `WORLD_SEED` and the PO id. One atomic query marks POs `received` or `delayed` and orders `fulfilled`, `fulfilled_late` or `unfulfilled`; only then does the UI say "fulfilled". Each delivery becomes a dated `Delivery` fact on the source site in `memory` (`memory:dryrun` for Demo runs), with the PO id as evidence. Learned reliability is the mean of the seeded value (weight 1) and each delivery's score, 1 − days late / 14. The balanced strategy S4 ranks sources by cost × (2 − reliability), so a supplier that slipped is tried later after a world reset. On seed 42, the first Monsoon plan asks Kanto Energy for its whole spare and two of its POs arrive 9 and 3 days late (6 of 12 protected orders ship late); Kanto drops from 0.98 to 0.71. After a reset, the next plan cuts Kanto from 475 to 233 packs a week and buys more from ElectroHub, says why in `simulate_strategies`, the plan and `recall_history`, and all 11 of its protected orders are fulfilled on time. `get_delivery_outcomes` lets an MCP client read the outcomes and learned values; only a human can fast-forward.
 
 | Mode | How it runs | Cost and requirements |
 |---|---|---|
@@ -229,7 +233,8 @@ The same image runs anywhere: `docker build -f deploy/single/Dockerfile -t domin
 - The sandbox uses a deterministic reality model, not a forecast of a real supplier’s behaviour.
 - Dependency traversal is bounded. Unknown or unmodelled entities do not establish safety.
 - The browser currently shares a live world. Resets and changes can invalidate another plan.
-- Routing, proactive risk scans, live arrival tracking and memory-driven supplier reliability updates are not implemented. Memory is recalled and shown to the agent; it does not change the allocator.
+- Routing, proactive risk scans and live arrival tracking are not implemented. Delivery outcomes come from a deterministic model of reliability and surge, not carrier data. Learned reliability changes only the reliability-weighted strategy (S4); the shortage projection still assumes planned arrival days.
+- On the public demo, every visitor's Demo runs add delivery facts to the same `memory:dryrun` graph, so learned reliability there reflects all past runs.
 - New purchase orders are checked against the capacity of the immediate upstream feeders only, not every deeper tier.
 - The allocator buys the full quantity of a reduced component, not only the net shortage, so a plan can overbuy (visible in the Panel Fire spend).
 - The report check verifies ids, evidence and numbers, not the meaning of every sentence.

@@ -145,9 +145,12 @@ class ScriptedClient:
             return self._call(("submit_plan_for_approval", {"strategy_id": "S3", "rationale": "Re-plan after "
                                "rejection: max-service plan.", "evidence_ids": evidence}))
         if not submitted:
+            sim = self._last("simulate_strategies")
+            learned = sim.get("ranking_changes") or [r["why"] for r in sim.get("learned_reliability", [])]
             return self._call(("submit_plan_for_approval", {
                 "strategy_id": self.strategy, "evidence_ids": evidence,
-                "rationale": "Protects the most penalty-weighted orders within budget in the sandbox comparison."}))
+                "rationale": "Protects the most penalty-weighted orders within budget in the sandbox comparison."
+                             + (" Learned from past deliveries: " + "; ".join(learned) + "." if learned else "")}))
         if "could not proceed" in note:  # approval failed (e.g. the world changed): stop instead of guessing
             return self._done("The approval could not proceed because the world changed; a new run is needed.")
         decision = submitted[-1]["decision_id"]
