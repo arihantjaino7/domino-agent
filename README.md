@@ -27,6 +27,8 @@ This is a synthetic world for Kestrel Devices. The seed generator and checked-in
 5. Execute: check the approved plan and commit purchase orders and allocations atomically.
 6. Verify and remember: check the result, store lessons and produce a report with evidence references.
 
+**Risk X-ray** works before anything happens. It stops each site that feeds a supplier or sells to a plant (tier 1 included), alone, at 0% for 21 days, on an in-memory copy of today's projection inputs, and ranks the sites by the orders that would become late, then by late fees. Sites Kestrel has no direct contract with are flagged as hidden. The top three, plus the worst hidden site, are re-run on a `GRAPH.COPY` sandbox with `declare_incident`, the projection and `algo.maxFlow`, which also measures the capacity drop. The live graph is only read, and results are cached until the world changes. In the seed-42 world the worst hidden weak point is VoltCell's Ayutthaya cell fab, the site behind the Monsoon scenario. The war room's Risk X-ray view shows the ranking, lights up the map by damage and can rehearse any stop as a manual disruption. Agents call it as `scan_single_points_of_failure`; the API is `GET /api/xray`.
+
 The UI groups tool calls into seven stages: Detect, Trace, Impact, Options, Simulate, Approve and Verify. The [architecture](docs/ARCHITECTURE.md) maps each stage to its tools.
 
 ## 4. Why a graph
@@ -38,7 +40,7 @@ Planned capabilities are marked so this table does not claim they already work.
 | Multi-tier exposure | Variable-length `FEEDS*0..4` paths | Dependency tracing and path evidence need another implementation. SQL can express recursive traversals too. | Implemented; traversal depth is bounded. |
 | Hidden shared dependencies | Paths meeting at an upstream site | Backups sharing a failure point are missed. | Implemented. |
 | Capacity and bottlenecks | `algo.maxFlow` on a projected network | Nominal tier-1 sums miss upstream limits and the min cut. | Implemented. |
-| Single-point-of-failure scan | Repeated max-flow knockouts | No advance warning from hypothetical site failures. | Planned; not a current tool. |
+| Single-point-of-failure scan | `FEEDS*0..4` evidence paths, `GRAPH.COPY` sandboxes and `algo.maxFlow` knockouts | No advance warning from hypothetical site failures. | Implemented (Risk X-ray): every upstream site is stopped alone and ranked by the late orders it causes; the worst are re-checked in sandboxes. |
 | Port chokepoints | `algo.betweenness` | No graph-based port criticality ranking. | Planned; not a current tool. |
 | Logistics rerouting | `algo.SPpaths` | No route search over the logistics network. | Planned; current engines use fixed transit days. |
 | Alert-to-entity resolution | Full-text search on `Place` | Alerts cannot be resolved through the current tools. | Implemented. |
@@ -112,7 +114,7 @@ The model chooses tools. Deterministic Python engines calculate results. A human
 
 The server is mounted at `/mcp`. It exposes these names from `backend/domino/mcp/server.py`:
 
-`health`, `resolve_entities`, `declare_incident`, `get_entity_context`, `recall_history`, `trace_exposure`, `explain_shared_dependencies`, `project_shortages`, `compute_true_capacity`, `find_alternatives`, `simulate_strategies`, `flag_orders_at_risk`, `submit_plan_for_approval`, `get_decision_status`, `verify_execution`, `record_lessons`, `submit_incident_report`.
+`health`, `resolve_entities`, `declare_incident`, `get_entity_context`, `recall_history`, `trace_exposure`, `explain_shared_dependencies`, `project_shortages`, `scan_single_points_of_failure`, `compute_true_capacity`, `find_alternatives`, `simulate_strategies`, `flag_orders_at_risk`, `submit_plan_for_approval`, `get_decision_status`, `verify_execution`, `record_lessons`, `submit_incident_report`.
 
 `health` checks connectivity. The recovery tools validate IDs and return engine results. `execute_plan` is not exposed as an MCP tool. External clients propose a plan, wait for the human in the war room, then read its status.
 

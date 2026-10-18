@@ -27,6 +27,8 @@ from domino.engines.incident import expand_sites
 from domino.engines.sandbox import simulate_strategies as _simulate
 from domino.engines.shortage import project_shortages as _project
 from domino.engines.verifier import verify_execution as _verify
+from domino.engines.xray import DEFAULT_DURATION as XRAY_DURATION
+from domino.engines.xray import scan as _xray_scan
 from domino.graph.run_query import run_query
 
 HORIZON = 42
@@ -219,6 +221,43 @@ def compute_true_capacity(ctx: RunContext, component_id: str, plant_id: str) -> 
                            for s in cap["sites"]],
                "units": "units of the component per week", "warnings": cap["warnings"]}
     ctx.add_result("compute_true_capacity", summary, cap)
+    return summary
+
+
+def scan_single_points_of_failure(ctx: RunContext, duration_days: int = XRAY_DURATION, top: int = 8) -> dict[str, Any]:
+    """Risk X-ray: what each upstream site's full outage would add to the current world. Read-only."""
+    if not 1 <= duration_days <= 120:
+        raise ToolInputError("duration_days must be between 1 and 120")
+    if not 1 <= top <= 25:
+        raise ToolInputError("top must be between 1 and 25")
+    res = _xray_scan(ctx.graph, duration_days=duration_days, horizon=HORIZON)
+    rows = []
+    for r in res["sites"][:top]:
+        conf = r["confirmed"]
+        rows.append({
+            "rank": r["rank"], "site": r["site"], "operator": r["operator"], "tier": r["tier"],
+            "hidden": r["hidden"], "single_point_of_failure": r["single_point_of_failure"],
+            "orders_late": r["orders_late"], "orders_exposed": r["orders_exposed"],
+            "penalty_usd": _usd(r["penalty_cents"]), "first_stockout_day": r["first_stockout_day"],
+            "tier1_hit": r["tier1_hit"], "plants_hit": r["plants_hit"],
+            "evidence_ids": [ctx.add_evidence(p["path"]) for p in r["paths"] if p["active"]][:6],
+            "sandbox_confirmed": None if conf is None else {
+                "matches_fast_pass": conf["matches_fast_pass"],
+                "capacity": [{k: c[k] for k in ("component", "plant", "healthy_wk", "during_outage_wk", "drop_wk")}
+                             for c in conf["capacity"]]},
+        })
+    summary = {
+        "scenario": f"each site alone at 0% capacity for {res['duration_days']} days from today",
+        "scope": res["scope"], "world_version": res["world_version"], "scanned": res["scanned"],
+        "single_points_of_failure": res["single_points_of_failure"],
+        "hidden_single_points_of_failure": res["hidden_single_points_of_failure"],
+        "baseline": {"projected_late": res["baseline"]["projected_late"],
+                     "penalty_exposure_usd": _usd(res["baseline"]["penalty_exposure_cents"])},
+        "sites": rows,
+        "wording": "counts are what one outage ADDS to the current world; hidden = Kestrel has no direct contract "
+                   "with the site; a site not in the graph is not scanned, which is not the same as safe",
+    }
+    ctx.add_result("scan_single_points_of_failure", summary, res)
     return summary
 
 
@@ -633,7 +672,8 @@ def submit_incident_report(ctx: RunContext, headline: str, outcome: str, claims:
 
 CATALOGUE = [
     resolve_entities, declare_incident, get_entity_context, recall_history, trace_exposure,
-    explain_shared_dependencies, project_shortages, compute_true_capacity, find_alternatives,
+    explain_shared_dependencies, project_shortages, scan_single_points_of_failure, compute_true_capacity,
+    find_alternatives,
     simulate_strategies, flag_orders_at_risk, submit_plan_for_approval, get_decision_status, verify_execution,
     record_lessons,
     submit_incident_report,

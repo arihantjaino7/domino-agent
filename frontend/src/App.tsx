@@ -4,12 +4,13 @@ import { ChainView } from './components/ChainView'
 import { FactoriesView } from './components/FactoriesView'
 import { OverviewView } from './components/OverviewView'
 import { ShipmentsView } from './components/ShipmentsView'
+import { XrayView } from './components/XrayView'
 import { useModel } from './lib/model'
 import { Toasts } from './lib/motion'
 import { useStore, type Mode } from './lib/store'
 
 const VIEWS = [
-  ['overview', 'Overview'], ['chain', 'Supply chain'], ['factories', 'Factories'], ['shipments', 'Shipments'], ['agent', 'AI agent'],
+  ['overview', 'Overview'], ['chain', 'Supply chain'], ['factories', 'Factories'], ['shipments', 'Shipments'], ['xray', 'Risk X-ray'], ['agent', 'AI agent'],
 ] as const
 export type ViewId = (typeof VIEWS)[number][0]
 
@@ -18,6 +19,7 @@ const ICON: Record<ViewId, React.ReactNode> = {
   chain: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="5" cy="6" r="2" /><circle cx="5" cy="18" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="19" cy="7" r="2" /><circle cx="19" cy="17" r="2" /><path d="M7 7l3.3 3.6M7 17l3.3-3.6M14 11.3 17 8M14 12.7l3 3.3" /></svg>,
   factories: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M3 20.5V11l5 3v-3l5 3v-3l5 3V4h3v16.5Z" /><path d="M7 17.5h2M12 17.5h2" opacity=".6" /></svg>,
   shipments: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><rect x="2.5" y="7" width="19" height="11" rx="1.5" /><path d="M6.5 7v11M10.5 7v11M14.5 7v11M18 9.5v6" /></svg>,
+  xray: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="12" cy="12" r="8.5" /><circle cx="12" cy="12" r="4.5" opacity=".6" /><circle cx="12" cy="12" r="1.2" fill="currentColor" /><path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3" /></svg>,
   agent: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><rect x="3" y="4" width="7" height="6" rx="1.5" /><rect x="14" y="14" width="7" height="6" rx="1.5" /><path d="M10 7h3a3 3 0 0 1 3 3v4" /><path d="M8 20h-1a4 4 0 0 1-4-4v-1" opacity=".5" /></svg>,
 }
 
@@ -26,7 +28,7 @@ const viewFromHash = (): ViewId => {
   return (VIEWS.some(([id]) => id === h) ? h : 'overview') as ViewId
 }
 
-/** The war room shell: icon rail, top bar with the views and the agent mode, and the five views. */
+/** The war room shell: icon rail, top bar with the views and the agent mode, and the views. */
 export default function App() {
   const load = useStore((s) => s.load)
   const error = useStore((s) => s.error)
@@ -63,6 +65,7 @@ export default function App() {
             {view === 'chain' && <ChainView />}
             {view === 'factories' && <FactoriesView />}
             {view === 'shipments' && <ShipmentsView />}
+            {view === 'xray' && <XrayView go={go} />}
             {view === 'agent' && <AgentView />}
           </section>
           <footer className="concept-note">DOMINO: a supply-chain recovery agent on FalkorDB. Every number here comes from a graph engine result or the API.</footer>

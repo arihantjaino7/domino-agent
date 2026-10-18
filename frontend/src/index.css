@@ -438,3 +438,31 @@ select.pick { height: 34px; padding: 0 30px 0 12px; border-radius: 99px; backgro
 .mcp-prompt { display: flex; gap: 10px; align-items: flex-start; margin: 10px 0 0 20px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); }
 .mcp-prompt code { flex: 1; white-space: pre-wrap; word-break: break-word; color: var(--ink); line-height: 1.5; }
 @media (max-width: 760px) { .mcp-pick, .mcp-prompt { margin-left: 0; } .mcp-prompt { flex-direction: column; } }
+
+/* ---------- Risk X-ray ---------- */
+.xr-block { cursor: pointer; }
+.xr-block:hover { filter: brightness(1.25); }
+.xr-detail .side-h h2 { min-width: 0; overflow-wrap: anywhere; }
+.xr-h3 { margin: 16px 0 0; font-size: 13px; color: var(--ink-2); }
+.xr-check { display: flex; gap: 8px; align-items: baseline; }
+.xr-check .dot { position: relative; top: -1px; }
+.xr-list-h { align-items: flex-start; flex-wrap: wrap; gap: 10px 16px; margin-bottom: 8px; }
+.xr-list { display: flex; flex-direction: column; margin-top: 6px; }
+.xr-row { display: grid; grid-template-columns: 34px minmax(0, 1fr) minmax(0, 360px); align-items: center; gap: 12px; width: 100%; padding: 10px 8px; border-top: 1px solid var(--line-2); border-radius: 10px; transition: background 0.2s; }
+.xr-row:hover, .xr-row.on { background: var(--surface-2); }
+.xr-rank { font-family: var(--display); font-size: 15px; color: var(--muted); text-align: center; }
+.xr-name { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px; min-width: 0; }
+.xr-name b { font-weight: 500; font-size: 13.5px; color: var(--ink); width: 100%; overflow-wrap: anywhere; }
+.xr-tag { height: 20px; font-size: 11px; padding: 0 8px; }
+.xr-metrics { display: grid; grid-template-columns: 56px 72px minmax(0, 1fr); gap: 12px; align-items: center; }
+.xr-metrics > span { display: flex; flex-direction: column; min-width: 0; }
+.xr-metrics b { font-family: var(--display); font-weight: 500; font-size: 15px; color: var(--ink); }
+.xr-bar { display: block; position: relative; height: 4px; margin-top: 4px; border-radius: 2px; background: var(--surface-3); overflow: hidden; }
+.xr-bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 2px; }
+@media (max-width: 760px) {
+  .bottom-nav button { flex: 0 1 auto; min-width: 0; padding: 4px 2px; }
+  .bottom-nav button span { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 10px; letter-spacing: -0.01em; }
+  .xr-row { grid-template-columns: 26px minmax(0, 1fr); }
+  .xr-metrics { grid-column: 2; grid-template-columns: 48px 64px minmax(0, 1fr); }
+}
+.xr-eyebrow { font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--accent-2); margin-bottom: 10px; }
