@@ -7,3 +7,7 @@
 frontend/dist
 backend/runs
 docs
+video
+eval/out
+design
+.claude

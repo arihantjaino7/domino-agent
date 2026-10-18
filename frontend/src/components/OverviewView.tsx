@@ -213,7 +213,12 @@ export function OverviewView({ go }: { go: (v: ViewId) => void }) {
   // Claude Code mode before its first tool call: the war room is only waiting, nothing is running yet.
   const waiting = st.mode === 'mcp' && m.phase === 'running' && m.steps.length === 0
   let h1: string, lede: string
-  if (m.phase === 'idle' || !T) {
+  // The world is shared: an earlier run (another visitor's, or a manual stop) may have left a disruption in it.
+  const leftover = st.summary?.incidents ?? []
+  if ((m.phase === 'idle' || !T) && leftover.length) {
+    h1 = 'This world still has an earlier disruption.'
+    lede = `${leftover.map((i) => i.id).join(', ')} from an earlier run: ${fmt(T?.orders)} customer orders, ${fmt(T?.projected_late ?? 0)} projected late. Reset the world to go back to the healthy start; starting a run below resets it too.`
+  } else if (m.phase === 'idle' || !T) {
     h1 = 'Your supply chain is running normally.'
     lede = `${fmt(T?.orders)} customer orders, ${fmt(T?.projected_late ?? 0)} projected late. Pick a disruption below to watch DOMINO find the problem, plan a fix and ask for your OK.`
   } else if (m.noExposure) {
