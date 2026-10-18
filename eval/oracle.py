@@ -240,6 +240,18 @@ class World:
                 "penalty_cents": sum(late_days[o["id"]] * o["penalty_per_day"] for o in orders),
                 "orders": len(orders)}
 
+    def single_points(self, duration: int = 21, horizon: int = 42) -> dict[str, dict]:
+        """Each site that feeds another site or holds a plant contract, stopped alone at 0%: what it adds."""
+        contracts = {e["src"] for e in self.by_type["SUPPLIES"] + self.by_type["CAN_SUPPLY"]}
+        scanned = contracts | {e["src"] for e in self.by_type["FEEDS"]}
+        base = self.project(horizon)
+        out = {}
+        for site in sorted(scanned):
+            scen = self.disrupted([site], 0, duration).project(horizon)
+            out[site] = {"late": scen["late"] - base["late"], "hidden": site not in contracts,
+                         "penalty_cents": scen["penalty_cents"] - base["penalty_cents"]}
+        return out
+
     def capacity(self, component: str, plant: str, nominal: bool = False) -> dict:
         contracts = [e for rel in ("SUPPLIES", "CAN_SUPPLY") for e in self.by_type[rel]
                      if e["dst"] == plant and e["props"]["component_id"] == component]

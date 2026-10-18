@@ -42,7 +42,7 @@ flowchart LR
 
 ## FalkorDB graphs
 
-`backend/domino/graph/lifecycle.py` loads a generated world into `world:pristine`, applies the schema and resets `world:live` with `GRAPH.COPY`. Sandboxes use `sandbox:<run>:<strategy>` copies. `engines/capacity.py` also creates temporary `scratch:flow:*` graphs for node-split max-flow networks and deletes them in `finally`. `agent/context.py` directs real lessons to `memory` and scripted lessons to `memory:dryrun`; world reset does not reset memory. See the [data model](DATA_MODEL.md) for labels, fields and constraints.
+`backend/domino/graph/lifecycle.py` loads a generated world into `world:pristine`, applies the schema and resets `world:live` with `GRAPH.COPY`. Sandboxes use `sandbox:<run>:<strategy>` copies; the Risk X-ray re-checks its worst sites on `sandbox:xray:<graph>:<site>` copies (`engines/xray.py`). `engines/capacity.py` also creates temporary `scratch:flow:*` graphs for node-split max-flow networks and deletes them in `finally`. `agent/context.py` directs real lessons to `memory` and scripted lessons to `memory:dryrun`; world reset does not reset memory. See the [data model](DATA_MODEL.md) for labels, fields and constraints.
 
 ## One run, step by step
 
@@ -51,7 +51,7 @@ The stages and tool names below are copied from `STEPS` in `frontend/src/lib/sto
 | Stage | Tools |
 |---|---|
 | Detect | `resolve_entities`, `declare_incident` |
-| Trace | `trace_exposure`, `explain_shared_dependencies`, `get_entity_context`, `recall_history` |
+| Trace | `trace_exposure`, `explain_shared_dependencies`, `get_entity_context`, `recall_history`, `scan_single_points_of_failure` |
 | Impact | `project_shortages`, `flag_orders_at_risk` |
 | Options | `compute_true_capacity`, `find_alternatives` |
 | Simulate | `simulate_strategies` |

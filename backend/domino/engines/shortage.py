@@ -154,7 +154,8 @@ def _po_cumulative(po: dict[str, Any], day: int) -> int:
 
 
 def project(inputs: dict[str, Any]) -> dict[str, Any]:
-    inputs = copy.deepcopy(inputs)  # the simulation tracks deliveries on the PO rows
+    # The simulation tracks deliveries on the PO rows, so only those are copied; everything else is read-only.
+    inputs = {**inputs, "pos": copy.deepcopy(inputs.get("pos", []))}
     horizon = inputs["horizon"]
     avail = site_availability(inputs["sites"], inputs["feeds"])
 

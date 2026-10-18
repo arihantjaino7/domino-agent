@@ -178,6 +178,19 @@ async def project_shortages(
 
 
 @mcp.tool()
+async def scan_single_points_of_failure(
+    duration_days: Annotated[int, Field(description="Outage length to simulate per site, in days (default 21)")] = 21,
+    top: Annotated[int, Field(description="How many ranked sites to return (default 8, at most 25)")] = 8,
+    run_id: RunId = "",
+) -> dict:
+    """Risk X-ray (read-only, proactive): simulates a full outage of every upstream site, one at a time, and
+    ranks them by orders it would make late and late penalties. Flags hidden single points of failure (sites
+    Kestrel has no direct contract with). The top sites are re-checked in a GRAPH.COPY sandbox with max-flow.
+    Returns evidence paths (E-ids) from each site to the tier-1 suppliers and plants it feeds."""
+    return await _call(T.scan_single_points_of_failure, run_id, duration_days=duration_days, top=top)
+
+
+@mcp.tool()
 async def compute_true_capacity(
     component_id: Annotated[str, Field(description="Component id, e.g. BAT-4S")],
     plant_id: Annotated[str, Field(description="Plant id, e.g. PL-BAC")],

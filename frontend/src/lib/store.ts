@@ -11,7 +11,7 @@ export type Mode = 'scripted' | 'replay' | 'mcp' | 'api'
 export type StepId = 'detect' | 'trace' | 'impact' | 'options' | 'simulate' | 'approve' | 'verify'
 export const STEPS: { id: StepId; num: string; title: string; tools: string[] }[] = [
   { id: 'detect', num: '01', title: 'Detect', tools: ['resolve_entities', 'declare_incident'] },
-  { id: 'trace', num: '02', title: 'Trace', tools: ['trace_exposure', 'explain_shared_dependencies', 'get_entity_context', 'recall_history'] },
+  { id: 'trace', num: '02', title: 'Trace', tools: ['trace_exposure', 'explain_shared_dependencies', 'get_entity_context', 'recall_history', 'scan_single_points_of_failure'] },
   { id: 'impact', num: '03', title: 'Impact', tools: ['project_shortages', 'flag_orders_at_risk'] },
   { id: 'options', num: '04', title: 'Options', tools: ['compute_true_capacity', 'find_alternatives'] },
   { id: 'simulate', num: '05', title: 'Simulate', tools: ['simulate_strategies'] },

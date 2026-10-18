@@ -114,3 +114,21 @@ def test_evidence_checks_order_identity_and_value_not_only_edge_existence():
     evidence["value_cents"] = 50_000
     evidence["orders"] = ["SO-B1"]  # wrong product, even though the plant is the same
     assert world.validate_evidence({"evidence": [evidence]}, ["S-UP"])["invalid"] == ["E1"]
+
+
+def test_single_point_scan_matches_the_hand_worked_tiny_world():
+    # Each site alone at 0% for 14 days (worked out in backend/tests/test_xray.py): S-T1 makes SO-A2 10 days and
+    # SO-A3 14 days late; S-UP, which Kestrel has no contract with, makes SO-A3 4 days late.
+    scan = World(snapshot(cases()[0]["world"])).single_points(14)
+    assert {s: (sorted(r["late"]), r["penalty_cents"]) for s, r in scan.items()} == {
+        "S-ALT": ([], 0), "S-T1": (["SO-A2", "SO-A3"], 15_000), "S-T2": ([], 0),
+        "S-UP": (["SO-A3"], 4_000), "S-UP2": ([], 0)}
+    assert {s for s, r in scan.items() if r["hidden"]} == {"S-UP", "S-UP2"}
+
+
+def test_single_point_scan_flags_voltcell_in_the_seeded_world():
+    from domino.seed.generator import generate
+    scan = World(snapshot(generate(42))).single_points(21)
+    hidden = sorted((s for s, r in scan.items() if r["hidden"] and r["late"]),
+                    key=lambda s: (-len(scan[s]["late"]), -scan[s]["penalty_cents"], s))
+    assert hidden[0] == "S-VOLT-AYU"

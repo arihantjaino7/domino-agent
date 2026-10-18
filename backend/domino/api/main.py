@@ -16,6 +16,7 @@ from domino.api.memory import router as memory_router
 from domino.api.replays import router as replays_router
 from domino.api.runs import router as runs_router
 from domino.api.world import router as world_router
+from domino.api.xray import router as xray_router
 from domino.config import settings
 from domino.graph.client import ping
 from domino.mcp.server import mcp
@@ -81,6 +82,7 @@ app.include_router(runs_router)
 app.include_router(world_router)
 app.include_router(memory_router)
 app.include_router(replays_router)
+app.include_router(xray_router)
 
 
 # HEAD too: uptime monitors (UptimeRobot's default) check with HEAD and would see 404 otherwise.
