@@ -164,7 +164,7 @@ RETURN count(o) AS flagged
 
 ### agent/ids_exist
 
-Resolve tool arguments against the graph before anything runs (CLAUDE.md rule 3).
+Resolve tool arguments against the graph before anything runs.
 
 Used by: `backend/domino/agent/tools.py`
 
@@ -217,7 +217,7 @@ ORDER BY product
 
 ### alternatives/candidates
 
-Q-ALTERNATIVES: approved-vendor-list sources into the plant, with the taint check. Any disrupted site 1-4 FEEDS hops upstream is returned as an evidence path. Exposure is a warning, not a rejection. nodes(null) after an OPTIONAL MATCH miss is null and collect() drops it, so clean sites get [] (SPIKE #9).
+Q-ALTERNATIVES: approved-vendor-list sources into the plant, with the taint check. Any disrupted site 1-4 FEEDS hops upstream is returned as an evidence path. Exposure is a warning, not a rejection. nodes(null) after an OPTIONAL MATCH miss is null and collect() drops it, so clean sites get [].
 
 Used by: `backend/domino/engines/alternatives.py`
 
@@ -396,7 +396,7 @@ ORDER BY n.id
 
 ### execute/preflight
 
-Q-EXECUTE-PREFLIGHT (read). One row per planned PO. The executor requires: N rows for N POs, the CAN_SUPPLY edge and component exist, the PO id is new, the PO has allocations, every allocation's order exists, and the edge still has free spare for the rate. (DECISIONS: M1 review)
+Q-EXECUTE-PREFLIGHT (read). One row per planned PO. The executor requires: N rows for N POs, the CAN_SUPPLY edge and component exist, the PO id is new, the PO has allocations, every allocation's order exists, and the edge still has free spare for the rate.
 
 Used by: `backend/domino/engines/executor.py`
 
@@ -415,7 +415,7 @@ ORDER BY po_id
 
 ### execute/write
 
-Q-EXECUTE: one atomic write. Matches only if the decision is approved with this plan_hash and the world is still at the version the plan was simulated on; bumps world_version; creates every PO with its links and PROTECTS allocations; marks orders protected (projected); logs an Action. The unique constraint on PurchaseOrder.id rolls the whole query back on a duplicate (SPIKE #11). The executor compares pos_created / protects_created with the plan (invariant V9).
+Q-EXECUTE: one atomic write. Matches only if the decision is approved with this plan_hash and the world is still at the version the plan was simulated on; bumps world_version; creates every PO with its links and PROTECTS allocations; marks orders protected (projected); logs an Action. The unique constraint on PurchaseOrder.id rolls the whole query back on a duplicate. The executor compares pos_created / protects_created with the plan (invariant V9).
 
 Used by: `backend/domino/engines/executor.py`
 
@@ -451,7 +451,7 @@ RETURN d.id AS decision, pos_created, protects_created, orders, m.world_version 
 
 ### exposure/exposure
 
-Q-EXPOSURE: multi-tier exposure of unknown depth, with the evidence path for every hit. *0..4 includes the affected site itself when it is a tier-1 supplier (SPIKE #8). One row per (chain, tier-1, component, product, plant); orders are collected per row.
+Q-EXPOSURE: multi-tier exposure of unknown depth, with the evidence path for every hit. *0..4 includes the affected site itself when it is a tier-1 supplier. One row per (chain, tier-1, component, product, plant); orders are collected per row.
 
 Used by: `backend/domino/engines/exposure.py`
 
@@ -538,7 +538,7 @@ RETURN count(n) AS created
 
 ### flow/maxflow
 
-Q-MAXFLOW on the scratch graph. Returns only edges that carry flow (SPIKE #2); flows are floats. If the max flow is 0, `edges` is empty and no rows come back: the engine treats that as flow 0.
+Q-MAXFLOW on the scratch graph. Returns only edges that carry flow; flows are floats. If the max flow is 0, `edges` is empty and no rows come back: the engine treats that as flow 0.
 
 Used by: `backend/domino/engines/capacity.py`
 
@@ -569,7 +569,7 @@ ORDER BY site, kind
 
 ### flow/upstream_feeds
 
-Q-FLOW-EXTRACT (b): every FEEDS edge 1-4 hops above those tier-1 sites, with the source site's capacity. DISTINCT on the edge removes duplicates from overlapping paths (SPIKE #8).
+Q-FLOW-EXTRACT (b): every FEEDS edge 1-4 hops above those tier-1 sites, with the source site's capacity. DISTINCT on the edge removes duplicates from overlapping paths.
 
 Used by: `backend/domino/engines/capacity.py`
 
@@ -742,7 +742,7 @@ ORDER BY site
 
 ### incident/resolve_places
 
-Resolve incident entity ids against the graph (CLAUDE.md rule 3). Ids that match nothing come back with label null.
+Resolve incident entity ids against the graph. Ids that match nothing come back with label null.
 
 Used by: `backend/domino/engines/incident.py`
 
@@ -973,7 +973,7 @@ ORDER BY component, input
 
 ### upstream/feeder_load
 
-Capacity, health and existing outgoing volume of upstream sites. The edge is aliased so every outgoing FEEDS contract is summed (CLAUDE.md rule 2).
+Capacity, health and existing outgoing volume of upstream sites. The edge is aliased so every outgoing FEEDS contract is summed.
 
 Used by: `backend/domino/engines/upstream.py`
 
@@ -1149,7 +1149,7 @@ RETURN type, label, properties, status
 
 ### schema/indexes
 
-Range indexes on every id we look up (PLAN §5.9), plus the Place full-text index. Place.id lets one loader query attach LOCATED_IN/SHIPS_VIA/DELIVERS_TO to any location. The PurchaseOrder.id exact-match index must exist before the unique constraint (SPIKE #10).
+Range indexes on every id we look up, plus the Place full-text index. Place.id lets one loader query attach LOCATED_IN/SHIPS_VIA/DELIVERS_TO to any location. The PurchaseOrder.id exact-match index must exist before the unique constraint.
 
 Used by: `backend/domino/graph/schema.py`
 
@@ -1451,7 +1451,7 @@ RETURN count(e) AS created
 
 ### seed/meta
 
-World metadata. world_version is bumped by every later write (PLAN §7.11).
+World metadata. world_version is bumped by every later write.
 
 Used by: `backend/domino/graph/lifecycle.py`
 

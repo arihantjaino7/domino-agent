@@ -1,8 +1,7 @@
-# DOMINO in ONE container: FalkorDB (the pinned image the spike passed on) + the FastAPI app + the built frontend.
+# DOMINO in ONE container: FalkorDB (the pinned, tested image) + the FastAPI app + the built frontend.
 # For hosts that run a single Docker container (Hugging Face Spaces, Render, a plain `docker run`).
 # Build from the repo root:  docker build -f deploy/single/Dockerfile -t domino-single .
 # Run:                       docker run --rm -p 7860:7860 domino-single      -> http://localhost:7860
-# deploy/huggingface/Dockerfile is this file with the source cloned from GitHub instead of copied: keep them in sync.
 
 # ---- source ----
 FROM scratch AS src

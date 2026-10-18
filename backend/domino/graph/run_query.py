@@ -1,10 +1,10 @@
-"""The only way Cypher reaches FalkorDB (CLAUDE.md rule 1).
+"""The only way Cypher reaches FalkorDB.
 
 `run_query(name, params)` loads `backend/domino/queries/<name>.cypher`, runs it
 (GRAPH.RO_QUERY by default), and records `{name, cypher, params, ms, rows}`.
 Those records feed the UI's Cypher drawer and docs/QUERIES.md.
 
-Two FalkorDB behaviours are handled here so callers never see them (SPIKE #14):
+Two FalkorDB behaviours are handled here so callers never see them:
 - The image's TIMEOUT 1000 kills slow reads, so every call passes an explicit timeout.
 - Results are silently cut at RESULTSET_SIZE rows, so a full result raises instead.
 """

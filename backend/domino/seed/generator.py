@@ -1,4 +1,4 @@
-"""Generate the Kestrel Devices world from one seed (PLAN §5).
+"""Generate the Kestrel Devices world from one seed.
 
 generate(seed) -> World is pure: no I/O, no clock, no global RNG. Each phase draws
 from its own `random.Random(f"{seed}:{phase}")`, so changing one phase never shifts

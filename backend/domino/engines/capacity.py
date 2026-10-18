@@ -1,4 +1,4 @@
-"""True capacity with `algo.maxFlow` (PLAN §7.6). Pure and deterministic; no LLM.
+"""True capacity with `algo.maxFlow`. Pure and deterministic; no LLM.
 
 1. Extract the upstream network for (component k, plant p) with Cypher (Q-FLOW-EXTRACT).
 2. Project it, in units of k per week, into a scratch graph `scratch:flow:<run>:<k>:<p>`:
@@ -8,7 +8,7 @@
    - supply edges into the plant get contracted used_wk + approved spare_wk (potential).
 3. Run algo.maxFlow from the in-nodes of the most upstream sites to the plant.
 4. Min cut from residual reachability on the full network held here in Python (FalkorDB
-   returns only edges that carry flow). Check: total cut capacity == max flow (DECISIONS M1 review).
+   returns only edges that carry flow). Check: total cut capacity == max flow.
 5. Also: the naive tier-1 sum, and each tier-1 site's standalone capacity (max-flow to its out-node).
 6. Drop the scratch graph in `finally`.
 

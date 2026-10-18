@@ -1,4 +1,4 @@
-# Render Blueprint: DOMINO in one free container (FalkorDB + app + war room). Guide: docs/DEPLOY_RENDER.md
+# Render Blueprint: DOMINO in one free container (FalkorDB + app + war room). Steps: README, "Deploy".
 services:
   - type: web
     name: domino

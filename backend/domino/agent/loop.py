@@ -1,4 +1,4 @@
-"""The DOMINO agent loop (PLAN §9.2): a manual loop you can explain line by line.
+"""The DOMINO agent loop: a manual loop you can explain line by line.
 
 Why manual: the run must pause across HTTP requests for human approval, emit an event per tool call,
 inject the run id, and persist state. One Claude agent chooses tools; engines compute every number;

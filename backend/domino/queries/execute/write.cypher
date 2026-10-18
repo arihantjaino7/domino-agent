@@ -1,7 +1,7 @@
 // Q-EXECUTE: one atomic write. Matches only if the decision is approved with this plan_hash and the
 // world is still at the version the plan was simulated on; bumps world_version; creates every PO with
 // its links and PROTECTS allocations; marks orders protected (projected); logs an Action.
-// The unique constraint on PurchaseOrder.id rolls the whole query back on a duplicate (SPIKE #11).
+// The unique constraint on PurchaseOrder.id rolls the whole query back on a duplicate.
 // The executor compares pos_created / protects_created with the plan (invariant V9).
 MATCH (d:Decision {id: $decision_id})
 WHERE d.status = 'approved' AND d.plan_hash = $plan_hash

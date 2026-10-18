@@ -1,4 +1,4 @@
-"""Shortage projection (PLAN §7.5): exposed vs projected-late. Pure and deterministic; no LLM.
+"""Shortage projection: exposed vs projected-late. Pure and deterministic; no LLM.
 
 Two parts:
   fetch_inputs(graph)   -> plain dicts pulled with named Cypher queries
@@ -13,7 +13,7 @@ Availability of a site (share of its normal output it can still make):
 Timing: a site whose inputs are reduced feels it `input_buffer_days` later; a disrupted site
 feels it on day 0 (the incident day). A supply edge delivers the reduced rate to the plant
 from onset + transit_days, and the full rate again from restore + transit_days, where restore
-is the latest `disrupted_until` among the reduced sources (§7.5 pipeline rule).
+is the latest `disrupted_until` among the reduced sources.
 """
 
 from __future__ import annotations

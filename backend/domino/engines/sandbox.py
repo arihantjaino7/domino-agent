@@ -1,4 +1,4 @@
-"""Sandbox simulation (PLAN §7.10). Pure and deterministic; no LLM.
+"""Sandbox simulation. Pure and deterministic; no LLM.
 
 For each strategy: GRAPH.COPY the live world to `sandbox:<run>:<S>`, apply the plan with the SAME
 executor code used for real execution, project shortages there (committed POs arrive at the rate the

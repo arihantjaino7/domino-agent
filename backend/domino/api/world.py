@@ -1,6 +1,6 @@
-"""World endpoints for the war-room canvas (PLAN §10): graph, summary, places, manual incident injection.
+"""World endpoints for the war-room canvas: graph, summary, places, manual incident injection.
 
-Every number returned comes from a named query or an engine (CLAUDE.md rule 8).
+Every number returned comes from a named query or an engine.
 """
 
 from __future__ import annotations

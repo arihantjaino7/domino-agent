@@ -1,4 +1,4 @@
-"""Hand-built story motifs (PLAN §5.6 Monsoon, §5.8 Panel Fire).
+"""Hand-built story motifs.
 
 These are design inputs for the generator, not answers. Engines compute every
 result (exposure, stockout days, capacity) from the graph at runtime, and the UI
@@ -8,7 +8,7 @@ Each motif is plain data, so every design number has exactly one home:
   sites, FEEDS, SUPPLIES, CAN_SUPPLY, plant stock, fixed demand, and the incident
   the scenario declares. `add_motif()` writes one motif into the world.
 
-Units (§5.2): integer units/week, integer cents, integer days.
+Units: integer units/week, integer cents, integer days.
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ from typing import Any
 
 from domino.seed.world import World
 
-# Monsoon (§5.6): the battery chain with a hidden shared cell fab in the flood zone.
+# Monsoon: the battery chain with a hidden shared cell fab in the flood zone.
 MONSOON: dict[str, Any] = {
     "suppliers": [
         # (id, name, hq_country, reliability)
@@ -92,7 +92,7 @@ MONSOON: dict[str, Any] = {
     },
 }
 
-# Panel Fire (§5.8): a single tier-1 failure, with a compatibility trap among the alternates.
+# Panel Fire: a single tier-1 failure, with a compatibility trap among the alternates.
 PANEL_FIRE: dict[str, Any] = {
     "suppliers": [
         ("SUP-LMVU", "Lumenvue Display", "CN", 0.96),

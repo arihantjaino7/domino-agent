@@ -1,4 +1,4 @@
-"""Memory tab (PLAN §7.13): what DOMINO remembers from past incidents, each item with the date it was learned.
+"""Memory tab: what DOMINO remembers from past incidents, each item with the date it was learned.
 
 Real runs write to `memory`; scripted Demo runs write to `memory:dryrun`, so the caller picks which one to read.
 Only those two graphs can be read here; the name is never taken from the request.

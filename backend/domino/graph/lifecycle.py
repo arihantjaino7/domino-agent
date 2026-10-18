@@ -1,7 +1,7 @@
-"""Graph lifecycle (PLAN §5.10): build `world:pristine`, then GRAPH.COPY it to `world:live`.
+"""Graph lifecycle: build `world:pristine`, then GRAPH.COPY it to `world:live`.
 
 The schema is applied once to pristine; GRAPH.COPY carries indexes, the full-text
-index and the unique constraint to every copy (SPIKE #5), so copies never re-apply it.
+index and the unique constraint to every copy, so copies never re-apply it.
 """
 
 from __future__ import annotations

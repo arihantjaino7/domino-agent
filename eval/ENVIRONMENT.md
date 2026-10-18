@@ -28,7 +28,7 @@ All six backups completed without errors. They are not committed or pushed. Back
 
 - [Database-free projection checks](OFFLINE_CHECKS.md): 60/60 checks on fixed seeds 42–61, with healthy, Monsoon and Panel Fire inputs.
 - [Read-only snapshot checks](READ_ONLY_CHECKS.md): 4/4 existing worlds matched the independent oracle and were unchanged by all recorded read-only queries. These checks include existing committed POs where present.
-- Oracle, harness and seed unit checks passed. Exact commands and counts are in `docs/CODEX_NOTES.md`.
+- Oracle, harness and seed unit checks passed.
 - The failed initial smoke metrics remain locally under `eval/out/smoke/`; they are not promoted as recovery benchmark results.
 
 ## Resume

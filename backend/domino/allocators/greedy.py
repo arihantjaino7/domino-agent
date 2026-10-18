@@ -1,4 +1,4 @@
-"""Graph-aware greedy allocator (PLAN §0.1). Pure and deterministic; no LLM.
+"""Graph-aware greedy allocator. Pure and deterministic; no LLM.
 
     for order in late orders, sorted by (need_day, not strategic, id):
         for each part the order is short of:

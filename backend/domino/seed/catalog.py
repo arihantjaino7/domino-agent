@@ -1,4 +1,4 @@
-"""Fixed reference data for the Kestrel Devices world (PLAN §5.1).
+"""Fixed reference data for the Kestrel Devices world.
 
 Places are real (approximate coordinates); every company and person is fictional.
 Nothing here is random. The generator draws only demand, orders and the filler
@@ -79,15 +79,15 @@ PLANTS = [
 
 # (id, name, family, unit, unit_cost_cents)
 COMPONENTS = [
-    # Monsoon battery chain (§5.6)
+    # Monsoon battery chain
     ("CELL-21700", "21700 Li-ion cell", "cell", "cells", 350),
     ("BAT-4S", "4S battery pack (KB14)", "battery", "packs", 3800),
     ("BAT-6S", "6S battery pack (KBP16)", "battery", "packs", 5200),
-    # Panel Fire display chain (§5.8)
+    # Panel Fire display chain
     ("PNL-14", "14-inch LCD panel", "panel", "panels", 2900),
     ("DSP-14", "14-inch display module (KB14)", "display", "modules", 6200),
     ("DSP-14-HB", "14-inch high-brightness display module", "display", "modules", 5900),
-    # Filler finished parts (K7 is filler tonight; the Scarce Silicon motif, §5.7, is deferred)
+    # Filler finished parts 
     ("K7", "K7 SoC", "soc", "pcs", 6800),
     ("DSP-16", "16-inch display module", "display", "modules", 9400),
     ("DSP-11", "11-inch display module", "display", "modules", 4800),

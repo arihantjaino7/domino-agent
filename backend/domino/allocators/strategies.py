@@ -1,4 +1,4 @@
-"""Strategy presets (PLAN §7.9 table, crunch version §0.1). Every preset runs the same greedy code.
+"""Strategy presets. Every preset runs the same greedy code.
 
 mode   "naive": tier-1 nominal view. Price only, approved spare as capacity, no taint check,
                 no upstream bookkeeping. This is baseline B1, what a tool without the graph does.

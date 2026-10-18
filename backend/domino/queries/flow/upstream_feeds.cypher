@@ -1,5 +1,5 @@
 // Q-FLOW-EXTRACT (b): every FEEDS edge 1-4 hops above those tier-1 sites, with the source site's capacity.
-// DISTINCT on the edge removes duplicates from overlapping paths (SPIKE #8).
+// DISTINCT on the edge removes duplicates from overlapping paths.
 MATCH (t1:Site)-[e:SUPPLIES|CAN_SUPPLY]->(:Plant {id: $plant_id})
 WHERE e.component_id = $component_id
 MATCH p = (:Site)-[:FEEDS*1..4]->(t1)

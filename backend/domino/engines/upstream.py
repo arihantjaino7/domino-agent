@@ -1,4 +1,4 @@
-"""Upstream bookkeeping shared by the allocator, the sandbox and the verifier (PLAN §0.1, §7.10, V8).
+"""Upstream bookkeeping shared by the allocator, the sandbox and the verifier.
 
 New purchase orders need input material (cells, panels...) from the source site's feeders. Existing
 contracts keep priority: a feeder's room for new orders is `capacity_wk x factor - existing used out`.

@@ -1,4 +1,4 @@
-"""Incident declaration (PLAN §7.2). Pure and deterministic; no LLM.
+"""Incident declaration. Pure and deterministic; no LLM.
 
 Recording an observed fact is a safe write: resolve every entity id against the graph,
 expand zones and regions to their sites, then one atomic write (Q-DECLARE).

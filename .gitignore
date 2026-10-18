@@ -10,3 +10,27 @@ dist/
 *.aof
 backend/runs/
 eval/out/
+
+# Working notes, plans and media kept on the author's machine, not published
+CLAUDE.md
+START_HERE.md
+PRODUCT.md
+.claude/
+design/
+video/
+deploy/huggingface/
+scripts/spike.py
+docs/PLAN.md
+docs/DECISIONS.md
+docs/SUBMISSION.md
+docs/EXPLAIN.md
+docs/SPIKE.md
+docs/DEPLOY.md
+docs/DEPLOY_HF.md
+docs/DEPLOY_RENDER.md
+docs/VIDEO.md
+docs/HANDOFF.md
+docs/OVERNIGHT_STATUS.md
+docs/CODEX_PROMPT.md
+docs/CODEX_VIDEO_PROMPT.md
+docs/CODEX_NOTES.md

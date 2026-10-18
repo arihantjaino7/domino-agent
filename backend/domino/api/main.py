@@ -20,7 +20,7 @@ from domino.config import settings
 from domino.graph.client import ping
 from domino.mcp.server import mcp
 
-# The SDK rejects foreign Host headers with 421 (DNS-rebinding protection, SPIKE #16), so the public
+# The SDK rejects foreign Host headers with 421 (DNS-rebinding protection), so the public
 # hostname must be listed when deployed behind Caddy.
 _hosts = ["127.0.0.1:*", "localhost:*", "127.0.0.1", "localhost"]
 if settings.domino_public_host:
@@ -64,7 +64,7 @@ class RequireMcpKey:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # The MCP session manager must run inside FastAPI's lifespan or /mcp errors (PLAN §9.4).
+    # The MCP session manager must run inside FastAPI's lifespan or /mcp errors.
     # It can run only once per process; a second app start in the same process (several TestClients in
     # one pytest session) then serves /api without HTTP /mcp. The agent uses in-process MCP either way.
     global _mcp_started

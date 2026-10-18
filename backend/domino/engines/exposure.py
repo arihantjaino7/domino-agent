@@ -1,4 +1,4 @@
-"""Exposure trace (PLAN §7.3) and shared-dependency explainer (§7.4). Pure and deterministic; no LLM.
+"""Exposure trace and shared-dependency explainer. Pure and deterministic; no LLM.
 
 Returns the tier-1 view (what a tier-1-only tool sees) next to the multi-tier view
 (variable-depth FEEDS paths), with numbered evidence paths and hop depth per node.

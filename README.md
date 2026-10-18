@@ -10,7 +10,7 @@
 
 DOMINO follows supply-chain dependencies, tests recovery plans in FalkorDB copies and executes the plan a human approves.
 
-Live demo: **[domino-jiie.onrender.com](https://domino-jiie.onrender.com/)** (free instance: after 15 idle minutes the first visit takes about a minute to wake it). Choose **Replay** to watch a recorded real Claude Code run, with no API key and no change to the graph, or **Demo** for the free scripted run with the real tools, approval and verification. All visitors share one world; **Reset the world** puts it back. Demo video: [youtu.be/H7s2jJbKR4Y](https://youtu.be/H7s2jJbKR4Y) (2:40, AI voiceover, real Claude Code run).
+Live demo: **[domino-jiie.onrender.com](https://domino-jiie.onrender.com/)** (free Render instance, kept awake by an UptimeRobot health check every 5 minutes; if it ever sleeps, the first visit takes about a minute). Choose **Replay** to watch a recorded real Claude Code run, with no API key and no change to the graph, or **Demo** for the free scripted run with the real tools, approval and verification. All visitors share one world; **Reset the world** puts it back. Demo video: [youtu.be/H7s2jJbKR4Y](https://youtu.be/H7s2jJbKR4Y) (2:40, AI voiceover, real Claude Code run).
 
 ## 2. The problem
 
@@ -29,11 +29,9 @@ This is a synthetic world for Kestrel Devices. The seed generator and checked-in
 
 The UI groups tool calls into seven stages: Detect, Trace, Impact, Options, Simulate, Approve and Verify. The [architecture](docs/ARCHITECTURE.md) maps each stage to its tools.
 
-[EXPLAIN.md](docs/EXPLAIN.md) walks through one Monsoon run step by step with the demo world's numbers (exposure, max-flow, the AmpereOne rejection, the five plans, approval, execution and the nine checks).
-
 ## 4. Why a graph
 
-Adapted from PLAN §6. Planned capabilities are marked so this table does not claim they already work.
+Planned capabilities are marked so this table does not claim they already work.
 
 | Capability | FalkorDB feature | What breaks without it | Current scope |
 |---|---|---|---|
@@ -90,7 +88,7 @@ graph LR
   META[Meta: version and seed]
 ```
 
-See [DATA_MODEL.md](docs/DATA_MODEL.md) for node properties, relationship tables, indexes, constraints and differences from the plan. The [generated query reference](docs/QUERIES.md) contains the Cypher and its code references. Regenerate it with `make queries-md`.
+See [DATA_MODEL.md](docs/DATA_MODEL.md) for node properties, relationship tables, indexes and constraints. The [generated query reference](docs/QUERIES.md) contains the Cypher and its code references. Regenerate it with `make queries-md`.
 
 ## 6. Architecture diagram
 
@@ -207,9 +205,19 @@ For a free headless scripted run:
 make demo-headless SCENARIO=monsoon DRY_RUN=1
 ```
 
-For a free public copy in one container (FalkorDB + app) on Render, follow [DEPLOY_RENDER.md](docs/DEPLOY_RENDER.md) (Hugging Face Spaces with a PRO plan: [DEPLOY_HF.md](docs/DEPLOY_HF.md)); the same image runs with `docker run` anywhere.
+Run `make test` for backend tests and `make eval` for the evaluation. Run `pnpm --dir frontend lint` and `pnpm --dir frontend build` for frontend checks. To use Claude Code as the agent locally, keep the app running and run `make agent-workspace`; against a hosted copy, see [MCP_REMOTE.md](docs/MCP_REMOTE.md).
 
-Run `make test` for backend tests. Run `pnpm --dir frontend lint` and `pnpm --dir frontend build` for frontend checks. To use Claude Code as the agent, keep the app running and run `make agent-workspace`; see [deployment and MCP instructions](docs/DEPLOY.md) for hosted configuration and authentication. Deployment status and public access still need author review.
+### Deploy (one container, free on Render)
+
+`deploy/single/Dockerfile` builds one image with FalkorDB (pinned image, listening only inside the container), the API and the built war room; `deploy/single/start.sh` starts FalkorDB, builds the world if it is missing and serves on `$PORT`. `render.yaml` describes it as a free Render web service (512 MB, 0.1 CPU; a full run peaks at about 160 MB).
+
+1. Sign in at render.com with GitHub and give Render access to this repo.
+2. **New** → **Blueprint** → pick the repo → **Apply**. (Or **New** → **Web Service**: language Docker, instance Free, Dockerfile path `./deploy/single/Dockerfile`, health check `/api/health`.)
+3. The first build takes about 10 minutes. New commits to `main` deploy automatically.
+4. Environment: `MCP_API_KEY` is generated (Claude Code needs it to connect); `MCP_OPEN=true` drops the key; `ANTHROPIC_API_KEY` turns on Claude API mode.
+5. Keep it awake: a free instance sleeps after 15 idle minutes and then builds the world again on the next visit (memory starts empty). An [UptimeRobot](https://uptimerobot.com) HTTP monitor on `https://<your-service>.onrender.com/api/health` every 5 minutes keeps it running; one always-on service fits in Render's 750 free hours a month.
+
+The same image runs anywhere: `docker build -f deploy/single/Dockerfile -t domino .` then `docker run --rm -p 7860:7860 domino` and open http://localhost:7860. For a VPS with automatic HTTPS, `docker-compose.prod.yml` runs FalkorDB, the app and Caddy.
 
 ## 11. Limitations and assumptions
 
@@ -228,11 +236,7 @@ Run `make test` for backend tests. Run `pnpm --dir frontend lint` and `pnpm --di
 
 ## 12. AI disclosure
 
-Read the [AI assistance disclosure](docs/AI_DISCLOSURE.md) and [design decisions](docs/DECISIONS.md) for the work history and review responsibilities.
-
-`docs/PLAN.md` holds planning notes written before the start (allowed by rule 8); all code was written after Oct 15 00:01 IST, and the commit history shows it.
-
-The [plan](docs/PLAN.md) is historical design material. The implemented-model and architecture documents identify where the current code differs. Evaluation numbers come from `make eval`; media and publication links are still marked TODO.
+Read the [AI assistance disclosure](docs/AI_DISCLOSURE.md) for what the author did and what Claude Code and Codex assisted with.
 
 ## 13. Credits
 

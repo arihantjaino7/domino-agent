@@ -1,6 +1,6 @@
 // Q-ALTERNATIVES: approved-vendor-list sources into the plant, with the taint check.
 // Any disrupted site 1-4 FEEDS hops upstream is returned as an evidence path. Exposure is a warning, not a rejection.
-// nodes(null) after an OPTIONAL MATCH miss is null and collect() drops it, so clean sites get [] (SPIKE #9).
+// nodes(null) after an OPTIONAL MATCH miss is null and collect() drops it, so clean sites get [].
 MATCH (alt:Site)-[cs:CAN_SUPPLY]->(pl:Plant {id: $plant_id})
 WHERE cs.component_id IN $component_ids
 OPTIONAL MATCH taint = (bad:Site)-[:FEEDS*1..4]->(alt)

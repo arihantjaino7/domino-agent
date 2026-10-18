@@ -1,6 +1,6 @@
 # Architecture
 
-DOMINO separates model decisions, deterministic calculations and human approval. The diagram follows the current files rather than planned features.
+DOMINO separates model decisions, deterministic calculations and human approval.
 
 ```mermaid
 flowchart LR

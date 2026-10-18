@@ -1,6 +1,6 @@
 // Q-EXECUTE-PREFLIGHT (read). One row per planned PO. The executor requires: N rows for N POs, the
 // CAN_SUPPLY edge and component exist, the PO id is new, the PO has allocations, every allocation's
-// order exists, and the edge still has free spare for the rate. (DECISIONS: M1 review)
+// order exists, and the edge still has free spare for the rate.
 UNWIND $pos AS po
 OPTIONAL MATCH (s:Site {id: po.site_id})-[cs:CAN_SUPPLY]->(pl:Plant {id: po.plant_id})
 WHERE cs.component_id = po.component_id

@@ -1,6 +1,6 @@
-// Range indexes on every id we look up (PLAN §5.9), plus the Place full-text index.
+// Range indexes on every id we look up, plus the Place full-text index.
 // Place.id lets one loader query attach LOCATED_IN/SHIPS_VIA/DELIVERS_TO to any location.
-// The PurchaseOrder.id exact-match index must exist before the unique constraint (SPIKE #10).
+// The PurchaseOrder.id exact-match index must exist before the unique constraint.
 CREATE INDEX FOR (n:Site) ON (n.id);
 CREATE INDEX FOR (n:Order) ON (n.id);
 CREATE INDEX FOR (n:Component) ON (n.id);

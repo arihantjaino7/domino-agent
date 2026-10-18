@@ -1,4 +1,4 @@
-"""Verifier (PLAN §7.12): nine invariants, each returning the violating rows (expected: none).
+"""Verifier: nine invariants, each returning the violating rows (expected: none).
 
 V1, V2, V4-V7 are read queries. V3 and V8 are computed here from the graph:
   V3: each committed PO's rate <= the source's remaining clean capacity (max-flow over healthy inputs);

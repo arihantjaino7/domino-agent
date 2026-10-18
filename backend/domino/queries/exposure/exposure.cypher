@@ -1,5 +1,5 @@
 // Q-EXPOSURE: multi-tier exposure of unknown depth, with the evidence path for every hit.
-// *0..4 includes the affected site itself when it is a tier-1 supplier (SPIKE #8).
+// *0..4 includes the affected site itself when it is a tier-1 supplier.
 // One row per (chain, tier-1, component, product, plant); orders are collected per row.
 MATCH (inc:Incident {id: $incident_id})-[a:AFFECTS]->(d:Site)
 MATCH chain = (d)-[:FEEDS*0..4]->(t1:Site)

@@ -1,4 +1,4 @@
-"""The agent's tool catalogue (PLAN §9.4): a fixed, parameterised set over the deterministic engines.
+"""The agent's tool catalogue: a fixed, parameterised set over the deterministic engines.
 
 The LLM never writes Cypher. Every id argument is resolved against the graph first; an unknown id
 raises ToolInputError ("unknown_entity", with did-you-mean suggestions), which the MCP layer returns

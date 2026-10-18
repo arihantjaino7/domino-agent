@@ -1,4 +1,4 @@
-"""Decision lifecycle and the executor (PLAN §7.11). Pure and deterministic; no LLM.
+"""Decision lifecycle and the executor. Pure and deterministic; no LLM.
 
 propose_decision -> approve_decision (bound to plan_hash + world_version) -> execute_plan, or reject_decision:
   preflight read (every reference checked) -> one atomic write -> receipt compared with the plan (V9).

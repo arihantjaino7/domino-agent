@@ -1,11 +1,11 @@
-"""Alternatives (PLAN §7.7). Pure and deterministic; no LLM.
+"""Alternatives. Pure and deterministic; no LLM.
 
 For one (component, plant):
   - acceptable parts come from BOM edges (REQUIRES plus ALLOWS_ALTERNATE {for_component}), per product;
   - candidates are CAN_SUPPLY edges for acceptable parts, plus same-family look-alikes so the BOM
     check can reject them explicitly (the Panel Fire trap);
   - each candidate gets a taint check (disrupted site 1-4 FEEDS hops upstream, path as evidence).
-    **Exposure is not rejection** (CLAUDE.md rule 7): a candidate is rejected only when its remaining
+    **Exposure is not rejection**: a candidate is rejected only when its remaining
     clean capacity, from max-flow over its healthy inputs, is 0.
 """
 

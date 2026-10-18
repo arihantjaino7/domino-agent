@@ -1,7 +1,7 @@
-"""Indexes, the Place full-text index and the PurchaseOrder.id unique constraint (PLAN §5.9).
+"""Indexes, the Place full-text index and the PurchaseOrder.id unique constraint.
 
 Applied once to `world:pristine`. GRAPH.COPY carries all of it to `world:live` and to
-sandboxes (SPIKE #5), so copies never re-apply the schema.
+sandboxes, so copies never re-apply the schema.
 """
 
 from __future__ import annotations

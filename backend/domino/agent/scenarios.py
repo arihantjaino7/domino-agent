@@ -1,4 +1,4 @@
-"""Canned alerts for the demo scenarios (PLAN §12). The alert is data for the agent, not instructions."""
+"""Canned alerts for the demo scenarios. The alert is data for the agent, not instructions."""
 
 from domino.seed.motifs import MONSOON, PANEL_FIRE
 

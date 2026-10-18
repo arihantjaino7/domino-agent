@@ -16,7 +16,7 @@ from typing import Any
 from domino.allocators.strategies import DEFAULT_BUDGET_CENTS
 from domino.config import settings
 
-# Ids the entity guard checks in narrative text: sites, suppliers, orders, plants (PLAN §9.7).
+# Ids the entity guard checks in narrative text: sites, suppliers, orders, plants.
 GUARDED_ID = re.compile(r"\b(?:SUP|SO|PL|S)-[A-Z0-9]+(?:-[A-Z0-9]+)*\b")
 ANY_ID = re.compile(r"\b(?:SUP|SO|PL|S|R|Z|P|A|CU|INC|DEC|PO)-[A-Z0-9]+(?:-[A-Z0-9]+)*\b")
 

@@ -1,6 +1,6 @@
-"""Institutional memory (PLAN §7.13) in the separate `memory` graph, which survives world resets.
+"""Institutional memory in the separate `memory` graph, which survives world resets.
 
-Memory is more nodes, returned with the date it was learned (organizer guidance, §0.2).
+Memory is more nodes, returned with the date it was learned.
 """
 
 from __future__ import annotations

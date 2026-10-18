@@ -1,5 +1,5 @@
-# Production stack for one small VPS (PLAN §14.4): FalkorDB + app + Caddy (automatic HTTPS).
-# Usage: docker compose -f docker-compose.prod.yml up -d --build     (see docs/DEPLOY.md)
+# Production stack for one small VPS: FalkorDB + app + Caddy (automatic HTTPS).
+# Usage: docker compose -f docker-compose.prod.yml up -d --build
 name: domino-prod
 
 services:

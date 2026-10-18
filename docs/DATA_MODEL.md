@@ -1,6 +1,6 @@
 # Data model
 
-This is PLAN §5.2–§5.5 and §5.9 reconciled with the seed generator, schema and checked-in write queries. The code is the source of truth. Property lists describe what writers create, not mandatory database constraints.
+This matches the seed generator, schema and checked-in write queries. The code is the source of truth. Property lists describe what writers create, not mandatory database constraints.
 
 ## Conventions
 
@@ -145,23 +145,3 @@ GRAPH.CONSTRAINT CREATE world:pristine UNIQUE NODE PurchaseOrder PROPERTIES 1 id
 ```
 
 The exact-match index on `PurchaseOrder.id` is created first. The constraint prevents duplicate IDs; the executor also checks decision state and existing IDs. `graph/lifecycle.py` applies schema to pristine and copies the indexes and constraint with `GRAPH.COPY`.
-
-## Differences from the plan
-
-- Add `Meta` with `id`, `world_version`, `seed`, `fingerprint`; it provides the version checked at execution (`queries/seed/meta.cypher`, `execute/write.cypher`).
-- Add `Component.unit` and `Plant.aliases` (`seed/generator.py`).
-- `Site.disrupted_until` is added when an incident is declared, rather than at seed time; current writers use `active` and `disrupted`, without setting `degraded` (`seed/motifs.py`, `queries/incident/declare.cypher`).
-- Add `Order.risk_reason` on flagging; current writes use `open` and `protected_projected`, without setting `shipped` (`seed/generator.py`, `queries/agent/flag_orders.cypher`, `execute/write.cypher`).
-- Add `Decision.world_version` and `executed_day`; a human rejection sets graph status `rejected` with `rejected_by` and `feedback` (`queries/decision/create.cypher`, `decision/reject.cypher`, `execute/write.cypher`, `agent/tools.py`).
-- Purchase orders are written as `committed`; no current query advances them to `in_transit`, `received` or `delayed` (`queries/execute/write.cypher`).
-- Remove `Hold`: no seed or write query creates it (`seed/world.py`, `queries/`).
-- Remove `EXPOSES` and its `late_days`/`shortfall` fields: exposure is returned to the run context rather than written as incident edges (`engines/exposure.py`, `agent/tools.py`).
-- Remove `CITES` and its `claim_id`: report evidence lives in run results rather than a graph relationship (`agent/tools.py`, `queries/`).
-- The disruption writer creates `AFFECTS` only to `Site`, not `Port` (`queries/incident/declare.cypher`).
-- Rename the alternate-reference property `for` to `for_component`; the loader supports `ALLOWS_ALTERNATE`, but the current generator creates no such rows (`queries/seed/edges_allows_alternate.cypher`, `alternatives/acceptable.cypher`, `seed/generator.py`).
-- Add `air_transit_days`, `air_surcharge_cents` and runtime `reserved_wk` to `CAN_SUPPLY` (`seed/motifs.py`, `seed/generator.py`, `queries/execute/write.cypher`).
-- `eff_days` and `cap_wk` belong to `LANE`; `SHIPS_VIA` and logistics `DELIVERS_TO` create only `days`, `cost_cents`, `mode` (`seed/generator.py`).
-- Memory creates `Incident`, `Entity` and `Lesson` with `INVOLVED`/`ABOUT` links, without the planned memory `Decision` or `Outcome` nodes; `Entity.reliability` is read but never set (`agent/memory.py`, `queries/memory/`).
-- Memory lessons use `learned_on` rather than `day` and add `id`, `incident_id`, `evidence` (`queries/memory/write_lessons.cypher`).
-- Add transient `F` nodes and `CAP` edges for the projected flow network (`queries/flow/load_nodes.cypher`, `flow/load_edges.cypher`).
-- Add exact-match ID indexes for `Place`, `Supplier`, `Product` and `Customer` beyond the plan’s list (`queries/schema/indexes.cypher`).

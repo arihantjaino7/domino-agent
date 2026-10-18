@@ -1,4 +1,4 @@
-"""Agent runs over HTTP (PLAN §10): start, stream events (SSE with Last-Event-ID), approve, reject.
+"""Agent runs over HTTP: start, stream events (SSE with Last-Event-ID), approve, reject.
 
 The agent reaches its tools through the same MCP server that is mounted at /mcp (in-process client).
 `dry_run: true` uses the scripted stand-in model: free, for UI work and tests.
@@ -34,7 +34,7 @@ _live_all: deque[float] = deque()
 
 
 def _check_live_quota(ip: str) -> None:
-    """Real agent runs cost API credit: cap them per IP per hour and globally per day (PLAN §14.4)."""
+    """Real agent runs cost API credit: cap them per IP per hour and globally per day."""
     now = time.time()
     mine = _live_by_ip.setdefault(ip, deque())
     while mine and now - mine[0] > 3600:

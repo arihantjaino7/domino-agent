@@ -1,6 +1,6 @@
 #!/bin/sh
 # One container, two processes: FalkorDB on localhost only, then the DOMINO app on $PORT (default 7860).
-# Used by deploy/single/Dockerfile and deploy/huggingface/Dockerfile.
+# Used by deploy/single/Dockerfile (Render: render.yaml).
 set -e
 
 DATA="${FALKORDB_DATA_PATH:-/var/lib/falkordb/data}"
@@ -26,7 +26,7 @@ if [ -z "$DOMINO_PUBLIC_HOST" ]; then
 fi
 
 # FalkorDB listens only inside the container. FALKORDB_ARGS comes from the base image
-# (MAX_QUEUED_QUERIES 25 TIMEOUT 1000 RESULTSET_SIZE 10000, the settings the spike passed with).
+# (MAX_QUEUED_QUERIES 25 TIMEOUT 1000 RESULTSET_SIZE 10000, the tested settings).
 # shellcheck disable=SC2086
 redis-server --protected-mode yes --bind 127.0.0.1 --port 6379 --dir "$DATA" --daemonize yes \
   --logfile "$DATA/falkordb.log" --loadmodule "$FALKORDB_BIN_PATH/falkordb.so" $FALKORDB_ARGS

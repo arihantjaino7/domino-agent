@@ -1,6 +1,6 @@
 """MCP server (official SDK; in mcp 2.x `FastMCP` is called `MCPServer`), mounted at /mcp.
 
-These are thin wrappers over `domino.agent.tools` (CLAUDE.md rule 4). Engines are synchronous, so
+These are thin wrappers over `domino.agent.tools`. Engines are synchronous, so
 each call runs in a worker thread (`asyncio.to_thread`) and never blocks the event loop or SSE.
 
 `run_id` is injected by DOMINO's own agent loop and stripped from the schema the model sees.

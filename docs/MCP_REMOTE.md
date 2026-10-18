@@ -39,7 +39,7 @@ war room and ask: "Call get_playbook, then handle this alert: …". Not tested e
 - **One shared world, one external run.** Two people driving it at the same time would mix their calls. Take turns.
 - **Buying always needs the war room.** `submit_plan_for_approval` only proposes; the executor runs after a click on
   Approve, bound to the plan hash and the world version.
-- The free Render instance sleeps after 15 idle minutes: open the site first and wait for it to load.
+- The live copy is kept awake by a 5-minute health check. If it was asleep anyway, open the site first and wait for it to load before running `claude mcp list`.
 - Tested on Oct 18 against the deployment image (`--memory=512m --cpus=0.1`): Claude Code in an empty folder, connected
   only by URL and header, ran `/mcp__domino__monsoon` through 18 tool calls, approval, 4 POs, 9 of 9 checks and an
   accepted report.
