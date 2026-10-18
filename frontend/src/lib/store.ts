@@ -82,6 +82,9 @@ interface State {
   scenarios: Scenario[]
   /** false when the server has no ANTHROPIC_API_KEY, so Claude API mode cannot run */
   claudeApi: boolean
+  /** guided tour: the step on screen, or null when it is closed */
+  tour: number | null
+  setTour: (step: number | null) => void
   /** true when /mcp needs MCP_API_KEY, so the Claude Code guide shows where the key goes */
   mcpKey: boolean
   places: Places | null
@@ -326,6 +329,7 @@ function initialTheme(): 'light' | 'dark' {
 
 export const useStore = create<State>((set, get) => ({
   graph: null, summary: null, scenarios: [], claudeApi: true, mcpKey: true, places: null, scenario: 'monsoon', mode: 'scripted', theme: initialTheme(),
+  tour: null, setTour: (tour) => set({ tour }),
   replays: [], replayId: null, recording: null,
   runId: null, runStatus: 'idle', events: [], steps: [], pendingDecision: null, selected: null, hoverEvidence: null,
   error: null, busy: false, ready: false, derived: EMPTY,

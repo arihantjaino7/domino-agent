@@ -4,6 +4,7 @@ import { ChainView } from './components/ChainView'
 import { FactoriesView } from './components/FactoriesView'
 import { OverviewView } from './components/OverviewView'
 import { ShipmentsView } from './components/ShipmentsView'
+import { Tour, TourInvite } from './components/Tour'
 import { XrayView } from './components/XrayView'
 import { useModel } from './lib/model'
 import { Toasts } from './lib/motion'
@@ -79,6 +80,8 @@ export default function App() {
           </button>
         ))}
       </nav>
+      <Tour go={go} />
+      <TourInvite />
       <Toasts />
     </>
   )
@@ -89,6 +92,7 @@ function TopBar({ view, go }: { view: ViewId; go: (v: ViewId) => void }) {
   const mode = useStore((s) => s.mode)
   const setMode = useStore((s) => s.setMode)
   const busy = useStore((s) => s.busy)
+  const setTour = useStore((s) => s.setTour)
   const working = m.phase === 'running' || m.phase === 'approving' || busy
   const inc = m.d.declared?.incident_id
   const summaryIncidents = useStore((s) => s.summary?.incidents?.length ?? 0)
@@ -120,6 +124,7 @@ function TopBar({ view, go }: { view: ViewId; go: (v: ViewId) => void }) {
             <button key={v} type="button" className={mode === v ? 'on' : ''} title={title} disabled={working} onClick={() => setMode(v)}>{t}</button>
           ))}
         </div>
+        <button type="button" className="tour-open" title="A one-minute guided tour" onClick={() => setTour(0)}>Tour</button>
         <span className="run-state">
           <i className={`dot st-${state[0]} ${m.phase === 'awaiting' || m.phase === 'running' ? 'pulse' : ''}`} />
           {mode === 'replay' && m.phase !== 'idle' ? `Replay · ${state[1]}` : state[1]}

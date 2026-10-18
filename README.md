@@ -10,7 +10,7 @@
 
 DOMINO follows supply-chain dependencies, tests recovery plans in FalkorDB copies and executes the plan a human approves.
 
-Live demo: **[domino-jiie.onrender.com](https://domino-jiie.onrender.com/)** (free Render instance, kept awake by an UptimeRobot health check every 5 minutes; if it ever sleeps, the first visit takes about a minute). Choose **Replay** to watch a recorded real Claude Code run, with no API key and no change to the graph, or **Demo** for the free scripted run with the real tools, approval and verification. All visitors share one world; **Reset the world** puts it back. Demo video: [youtu.be/H7s2jJbKR4Y](https://youtu.be/H7s2jJbKR4Y) (2:40, AI voiceover, real Claude Code run). Write-up: [My ERP Said Everything Was Fine. A Flood Three Tiers Away Said Otherwise.](https://arihantt.hashnode.dev/my-erp-said-everything-was-fine-a-flood-three-tiers-away-said-otherwise)
+Live demo: **[domino-jiie.onrender.com](https://domino-jiie.onrender.com/)** (free Render instance, kept awake by an UptimeRobot health check every 5 minutes; if it ever sleeps, the first visit takes about a minute). Choose **Replay** to watch a recorded real Claude Code run, with no API key and no change to the graph, or **Demo** for the free scripted run with the real tools, approval and verification. All visitors share one world; **Reset the world** puts it back. First time? Press **Tour** (top right) for a one-minute guided walk through the war room. Demo video: [youtu.be/H7s2jJbKR4Y](https://youtu.be/H7s2jJbKR4Y) (2:40, AI voiceover, real Claude Code run). Write-up: [My ERP Said Everything Was Fine. A Flood Three Tiers Away Said Otherwise.](https://arihantt.hashnode.dev/my-erp-said-everything-was-fine-a-flood-three-tiers-away-said-otherwise)
 
 ## 2. The problem
 
