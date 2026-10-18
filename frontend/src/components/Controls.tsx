@@ -79,13 +79,37 @@ export function McpGuide() {
   const st = useStore()
   const sc = st.scenarios.find((s) => s.id === st.scenario) ?? st.scenarios[0]
   const prompt = sc ? mcpPrompt(sc.alert) : ''
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(prompt)
-      useToasts.getState().push('Alert copied. Paste it into Claude Code.')
-    } catch {
-      useToasts.getState().push('Could not copy. Select the text and copy it by hand.')
-    }
+  // On a hosted copy the server is this page's own address, and the agent's instructions come from the server,
+  // so one command connects Claude Code on any computer. Locally, the repo's agent workspace is used.
+  const remote = !['localhost', '127.0.0.1', '[::1]'].includes(location.hostname)
+  const url = `${location.origin}/mcp/`
+  const connect = `claude mcp add --transport http --scope user domino ${url}${st.mcpKey ? ' --header "Authorization: Bearer YOUR_KEY"' : ''}`
+  const pick = (
+    <div className="mcp-pick" role="group" aria-label="Alert to paste">
+      {st.scenarios.map((s) => (
+        <button key={s.id} type="button" className={st.scenario === s.id ? 'on' : ''} onClick={() => st.setScenario(s.id)}>{s.title}</button>
+      ))}
+    </div>
+  )
+  const approveStep = <li>When Claude Code says the plan is waiting, approve or reject it here, then tell Claude Code you decided.</li>
+  if (remote) {
+    return (
+      <div className="mcp-guide">
+        <p className="plain">Claude Code is the agent: it reads the alert and chooses DOMINO's tools. This war room shows each step live and asks you before anything is bought. It works from any computer with Claude Code and a Claude subscription; no API key and no download of this project are needed.</p>
+        <ol>
+          <li>Once per computer, connect Claude Code to this site ({st.mcpKey ? <>replace <code>YOUR_KEY</code> with the key you were given</> : 'no key needed'}):</li>
+        </ol>
+        <CopyLine text={connect} done="Command copied. Run it in a terminal." />
+        <ol start={2}>
+          <li>Press <b>Watch Claude Code</b> below. The world resets and this page starts watching.</li>
+          <li>Run <code>claude</code> in any folder, pick an alert and send its command. It gives Claude the alert and DOMINO's playbook:</li>
+        </ol>
+        {pick}
+        {sc && <CopyLine text={`/mcp__domino__${sc.id}`} done="Command copied. Paste it into Claude Code." />}
+        <ol start={4}>{approveStep}</ol>
+        <p className="plain">In claude.ai or Claude Desktop: Settings → Connectors → Add custom connector, with the address <code>{st.mcpKey ? `${url}?key=YOUR_KEY` : url}</code>. Then ask: "Call get_playbook, then handle this alert: …".</p>
+      </div>
+    )
   }
   return (
     <div className="mcp-guide">
@@ -96,18 +120,26 @@ export function McpGuide() {
         <li>Press <b>Watch Claude Code</b> below. The world resets and this page starts watching.</li>
         <li>Pick an alert, copy it and paste it into Claude Code:</li>
       </ol>
-      <div className="mcp-pick" role="group" aria-label="Alert to paste">
-        {st.scenarios.map((s) => (
-          <button key={s.id} type="button" className={st.scenario === s.id ? 'on' : ''} onClick={() => st.setScenario(s.id)}>{s.title}</button>
-        ))}
-      </div>
-      <div className="mcp-prompt">
-        <code>{prompt}</code>
-        <button type="button" className="btn btn-ghost" onClick={() => void copy()}>Copy</button>
-      </div>
-      <ol start={5}>
-        <li>When Claude Code says the plan is waiting, approve or reject it here, then tell Claude Code you decided.</li>
-      </ol>
+      {pick}
+      <CopyLine text={prompt} done="Alert copied. Paste it into Claude Code." />
+      <ol start={5}>{approveStep}</ol>
+    </div>
+  )
+}
+
+function CopyLine({ text, done }: { text: string; done: string }) {
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(text)
+      useToasts.getState().push(done)
+    } catch {
+      useToasts.getState().push('Could not copy. Select the text and copy it by hand.')
+    }
+  }
+  return (
+    <div className="mcp-prompt">
+      <code>{text}</code>
+      <button type="button" className="btn btn-ghost" onClick={() => void copy()}>Copy</button>
     </div>
   )
 }

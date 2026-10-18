@@ -15,10 +15,13 @@ DST = ROOT.parent / "domino-agent"
 
 def main() -> int:
     sys.stdout.reconfigure(encoding="utf-8")
-    for rel in ("CLAUDE.md", ".mcp.json", ".claude/settings.json"):
+    # The agent's instructions live with the MCP server (it serves them to remote clients too).
+    files = {"CLAUDE.md": ROOT / "backend" / "domino" / "mcp" / "playbook.md",
+             ".mcp.json": SRC / ".mcp.json", ".claude/settings.json": SRC / ".claude" / "settings.json"}
+    for rel, src in files.items():
         target = DST / rel
         target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(SRC / rel, target)
+        shutil.copyfile(src, target)
     print(f"Agent workspace ready: {DST}")
     print("1. Start DOMINO:  make dev   (the MCP server is http://127.0.0.1:8000/mcp/)")
     print("2. In the war room choose 'Claude Code · MCP' and press 'Watch Claude Code'.")

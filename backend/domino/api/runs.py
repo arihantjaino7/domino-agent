@@ -99,8 +99,10 @@ def _get(run_id: str) -> AgentRun:
 
 @router.get("/scenarios")
 async def scenarios() -> dict:
-    # claude_api tells the war room whether "Run with Claude" can work here (a public copy usually has no key).
-    return {"scenarios": [{"id": k, **v} for k, v in SCENARIOS.items()], "claude_api": bool(settings.anthropic_api_key)}
+    # claude_api tells the war room whether "Run with Claude" can work here (a public copy usually has no key);
+    # mcp_key whether an MCP client needs the key, so the Claude Code guide shows the right connect command.
+    return {"scenarios": [{"id": k, **v} for k, v in SCENARIOS.items()], "claude_api": bool(settings.anthropic_api_key),
+            "mcp_key": bool(settings.mcp_api_key)}
 
 
 @router.post("/world/reset")

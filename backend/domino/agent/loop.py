@@ -97,7 +97,7 @@ async def model_tools(mcp_client: Any) -> list[dict[str, Any]]:
     listed = await mcp_client.list_tools()
     out = []
     for t in listed.tools:
-        if t.name == "health":
+        if t.name in ("health", "get_playbook"):  # DOMINO's own agent has its system prompt; the playbook is for external clients
             continue
         schema = json.loads(json.dumps(t.input_schema))
         schema.get("properties", {}).pop("run_id", None)

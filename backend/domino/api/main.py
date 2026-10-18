@@ -5,6 +5,7 @@ import hmac
 import json
 from contextlib import asynccontextmanager
 from pathlib import Path
+from urllib.parse import parse_qs
 
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
@@ -34,9 +35,10 @@ _mcp_started = False
 
 
 class RequireMcpKey:
-    """If MCP_API_KEY is set, /mcp needs `Authorization: Bearer <key>` or `X-API-Key: <key>`.
+    """If MCP_API_KEY is set, /mcp needs `Authorization: Bearer <key>`, `X-API-Key: <key>` or `?key=<key>`.
 
     The public demo exposes tools that change the live world, so external MCP clients must hold the key.
+    The query form is for clients that cannot send headers (custom connectors in claude.ai / Claude Desktop).
     (DOMINO's own agent calls the same server in-process and never goes through this door.)
     """
 
@@ -47,8 +49,10 @@ class RequireMcpKey:
         key = settings.mcp_api_key
         if scope["type"] == "http" and key:
             headers = {k.decode().lower(): v.decode() for k, v in scope.get("headers", [])}
+            query = parse_qs(scope.get("query_string", b"").decode())
             ok = (hmac.compare_digest(headers.get("x-api-key", ""), key)
-                  or hmac.compare_digest(headers.get("authorization", ""), f"Bearer {key}"))
+                  or hmac.compare_digest(headers.get("authorization", ""), f"Bearer {key}")
+                  or hmac.compare_digest((query.get("key") or [""])[0], key))
             if not ok:
                 body = json.dumps({"error": "MCP API key required"}).encode()
                 await send({"type": "http.response.start", "status": 401,

@@ -279,3 +279,56 @@ def test_scenarios_say_whether_claude_api_mode_can_run(monkeypatch):
         assert c.post("/api/runs", json={"scenario": "monsoon"}).status_code == 400
         monkeypatch.setattr(settings, "anthropic_api_key", "sk-test")
         assert c.get("/api/scenarios").json()["claude_api"] is True
+
+
+def test_remote_clients_get_the_playbook_and_alert_prompts_from_the_server():
+    # A Claude Code on any computer connects with only the URL: no repo, no CLAUDE.md.
+    import asyncio
+
+    from mcp.client.client import Client
+
+    from domino.agent.loop import model_tools
+    from domino.mcp.server import PLAYBOOK, mcp
+
+    async def go():
+        async with Client(mcp) as c:
+            prompts = {p.name for p in (await c.list_prompts()).prompts}
+            monsoon = await c.get_prompt("monsoon")
+            own = await c.get_prompt("alert", {"text": "Fire at a plant in Suzhou."})
+            playbook = await c.call_tool("get_playbook", {})
+            return prompts, monsoon, own, playbook, await model_tools(c)
+
+    prompts, monsoon, own, playbook, own_agent_tools = asyncio.run(go())
+    assert {"monsoon", "panel_fire", "non_event", "alert"} <= prompts
+    text = monsoon.messages[0].content.text
+    assert "Tool arguments" in text and "Ayutthaya" in text and "DOMINO war room" in text
+    assert "Fire at a plant in Suzhou." in own.messages[0].content.text
+    assert "submit_plan_for_approval" in PLAYBOOK and "Tool arguments" in playbook.content[0].text
+    assert "get_playbook" not in {t["name"] for t in own_agent_tools}  # DOMINO's own agent has its system prompt
+
+
+def test_mcp_key_also_works_in_the_url(monkeypatch):
+    # claude.ai / Claude Desktop custom connectors cannot send headers: ?key= is accepted too.
+    import asyncio
+
+    from domino.api.main import RequireMcpKey
+
+    async def ok_app(scope, receive, send):
+        await send({"type": "http.response.start", "status": 200, "headers": []})
+        await send({"type": "http.response.body", "body": b""})
+
+    def status(query: bytes, headers=()):
+        sent = []
+
+        async def send(msg):
+            sent.append(msg)
+        scope = {"type": "http", "query_string": query, "headers": list(headers)}
+        asyncio.run(RequireMcpKey(ok_app)(scope, None, send))
+        return sent[0]["status"]
+
+    monkeypatch.setattr(settings, "mcp_api_key", "k3y")
+    assert status(b"") == 401 and status(b"key=wrong") == 401
+    assert status(b"key=k3y") == 200
+    assert status(b"", [(b"authorization", b"Bearer k3y")]) == 200
+    monkeypatch.setattr(settings, "mcp_api_key", "")
+    assert status(b"") == 200

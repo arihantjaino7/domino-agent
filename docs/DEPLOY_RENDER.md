@@ -30,8 +30,9 @@ generates.
    **Approve** when it pauses. Then try **Demo** → **Run the demo**.
 6. Optional, under **Environment**:
    - `ANTHROPIC_API_KEY`: only with a spend limit set in the Anthropic Console. Runs are capped per visitor and per day.
-   - `MCP_API_KEY` shows the generated key. Claude Code can drive this copy at `https://<address>/mcp/` with
-     `Authorization: Bearer <key>`. The public host name is picked up automatically from Render.
+   - `MCP_API_KEY` shows the generated key. Claude Code on any computer can drive this copy with it:
+     [MCP_REMOTE.md](MCP_REMOTE.md). The public host name is picked up automatically from Render.
+   - `MCP_OPEN` = `true` opens `/mcp` to anyone with the address (no key). Buying still needs Approve in the war room.
 
 ## Good to know
 

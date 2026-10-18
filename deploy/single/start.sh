@@ -8,7 +8,12 @@ mkdir -p "$DATA"
 
 # A public demo must never leave the MCP endpoint open: the tools change the shared live world.
 # Without a key from the host's secrets, a random one is generated, so /mcp is effectively closed.
-if [ -z "$MCP_API_KEY" ]; then
+# MCP_OPEN=true opens /mcp to anyone with the URL (any Claude Code can connect without a key). The REST API is
+# open in the same way, and buying still needs a click on Approve in the war room.
+if [ "$MCP_OPEN" = "true" ]; then
+  unset MCP_API_KEY
+  echo "MCP_OPEN=true: /mcp needs no key."
+elif [ -z "$MCP_API_KEY" ]; then
   MCP_API_KEY="$(head -c 24 /dev/urandom | od -An -tx1 | tr -d ' \n')"
   export MCP_API_KEY
   echo "MCP_API_KEY not set: /mcp is closed (random key). Set it as a secret to use Claude Code against this server."

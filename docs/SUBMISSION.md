@@ -26,7 +26,7 @@ In 40 generated disruptions, late orders fell from 383 (do nothing) to 130 (tier
 |---|---|---|
 | Multi-hop reasoning over connected data | `FEEDS*0..4` paths from the disrupted site to tier-1 suppliers, plants, products and orders, plus the shared-upstream check that rejects AmpereOne as a backup. Tier-1 view: 0 affected suppliers. Multi-tier: 2. | `queries/exposure/`, `engines/exposure.py`, `engines/alternatives.py` |
 | Graph queries and algorithms in the decision | `algo.maxFlow` with node splitting for clean capacity and the min cut; full-text search to resolve alert places; `GRAPH.COPY` for what-if sandboxes; `GRAPH.RO_QUERY` for every read. | `queries/flow/`, `engines/capacity.py`, `engines/sandbox.py`, `docs/QUERIES.md` |
-| An agent that chooses tools | The model picks from a fixed MCP catalogue (16 recovery tools plus `health`). Claude Code can drive it over MCP at no API cost; the war room watches each call live, with the Cypher it ran. | `mcp/server.py`, `agent/tools.py`, `demo/claude-code-agent/` |
+| An agent that chooses tools | The model picks from a fixed MCP catalogue (16 recovery tools plus `health`). Claude Code can drive it over MCP at no API cost; the war room watches each call live, with the Cypher it ran. | `mcp/server.py`, `mcp/playbook.md`, `agent/tools.py`, [MCP_REMOTE.md](MCP_REMOTE.md) |
 | Acting on the graph, safely | After human approval, one atomic write creates the decision, purchase orders, allocations and audit actions. Preflight first, receipt counts compared with the plan, approval tied to `plan_hash` and `world_version`, unique PO ids. | `engines/executor.py`, `queries/execute/` |
 | Explainable, checkable results | Evidence paths (E1, E2, …), result references (R-04.totals.projected_late), nine verifier checks (V1–V9) and a report validator that rejects unknown ids and numbers. Memory returns earlier lessons with the date they were learned. | `engines/verifier.py`, `agent/tools.py`, `api/memory.py` |
 
@@ -46,7 +46,7 @@ From `eval/RESULTS.md` (seeds 42–61, Monsoon and Panel Fire, 40 cases, 4,766 o
 - In the Panel Fire cases all three recovery methods reach 0 late orders, because the backup supplier is clean. The graph helps when the backup shares an upstream site.
 - Demo world, Monsoon: 13 late orders with no action → 1 late after the approved S4 plan, for $142,475.
 - Oracle agreement: exposure 998/998, projected-late 386/386, max-flow 85/85, evidence paths 85/85, 0 of 176 projection mismatches, 20/20 healthy worlds with 0 late.
-- Tests: 104 backend and 24 evaluation tests passing.
+- Tests: 106 backend and 24 evaluation tests passing.
 
 ## Do not claim
 
