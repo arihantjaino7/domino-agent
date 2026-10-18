@@ -83,7 +83,8 @@ app.include_router(memory_router)
 app.include_router(replays_router)
 
 
-@app.get("/api/health")
+# HEAD too: uptime monitors (UptimeRobot's default) check with HEAD and would see 404 otherwise.
+@app.api_route("/api/health", methods=["GET", "HEAD"])
 async def health():
     try:
         info = await asyncio.to_thread(ping)
