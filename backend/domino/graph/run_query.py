@@ -28,7 +28,7 @@ from domino.graph.client import get_db
 QUERIES_DIR = Path(__file__).resolve().parents[1] / "queries"
 _NAME_RE = re.compile(r"^[a-z0-9_]+(/[a-z0-9_]+)?$")
 
-READ_TIMEOUT_MS = 5_000
+READ_TIMEOUT_MS = 20_000  # a busy 0.1-CPU host can take several seconds for a scan that needs 100 ms elsewhere
 WRITE_TIMEOUT_MS = 30_000
 
 log = logging.getLogger("domino.query")

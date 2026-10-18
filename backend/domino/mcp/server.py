@@ -11,6 +11,7 @@ on the live world. There is no tool that writes Cypher, and `execute_plan` is no
 from __future__ import annotations
 
 import asyncio
+import logging
 import time
 from pathlib import Path
 from typing import Annotated, Any
@@ -25,6 +26,8 @@ from domino.agent.context import get_context
 from domino.agent.scenarios import SCENARIOS
 from domino.graph.client import ping
 from domino.graph.run_query import capture_queries, group_records
+
+log = logging.getLogger("domino.mcp")
 
 # The agent's job and rules travel with the server, so a client on any computer needs only the URL
 # (no repo, no CLAUDE.md): short rules as server instructions, the full text via get_playbook and the prompts.
@@ -90,6 +93,9 @@ async def _call(fn, run_id: str, **kwargs: Any) -> dict[str, Any]:
         if run:
             external.after_call(run, fn.__name__, None, str(exc), round((time.monotonic() - t0) * 1000))
         raise ToolError(str(exc)) from exc
+    except Exception:  # the SDK replaces this with a generic message; keep the cause in the server log
+        log.exception("tool %s failed", fn.__name__)
+        raise
     if run:
         external.after_call(run, fn.__name__, out, None, round((time.monotonic() - t0) * 1000))
     return out
