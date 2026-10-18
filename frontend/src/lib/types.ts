@@ -99,3 +99,25 @@ export interface Recording extends Omit<ReplayMeta, 'events'> {
   frames: { after_seq: number; graph: WorldGraph; summary: Summary }[]
   events: RunEvent[]
 }
+
+export interface LiveAlertPlace { id: string; name: string; kind: 'Site' | 'Plant' | 'Port' | 'Region'; tier: number | null; distance_km: number }
+export interface LiveAlert {
+  id: string
+  event_type: string
+  type_label: string
+  title: string
+  country: string
+  alert_level: string
+  lat: number
+  lng: number
+  starts_at: string | null
+  ends_at: string | null
+  updated_at: string | null
+  radius_km: number
+  places: LiveAlertPlace[]
+  sites: LiveAlertPlace[]
+  site_ids: string[]
+  in_graph: boolean
+  alert_text: string
+}
+export interface LiveAlertsResponse { events: LiveAlert[]; source: 'gdacs'; updated_at: string | null; error?: string }
