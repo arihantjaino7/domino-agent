@@ -99,7 +99,8 @@ def _get(run_id: str) -> AgentRun:
 
 @router.get("/scenarios")
 async def scenarios() -> dict:
-    return {"scenarios": [{"id": k, **v} for k, v in SCENARIOS.items()]}
+    # claude_api tells the war room whether "Run with Claude" can work here (a public copy usually has no key).
+    return {"scenarios": [{"id": k, **v} for k, v in SCENARIOS.items()], "claude_api": bool(settings.anthropic_api_key)}
 
 
 @router.post("/world/reset")

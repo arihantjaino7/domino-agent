@@ -61,6 +61,7 @@ From `eval/RESULTS.md` (seeds 42–61, Monsoon and Panel Fire, 40 cases, 4,766 o
 
 - [x] Push `main`. Still to do: make the repo public and open it in a logged-out window.
 - [x] Hero GIF and the local Replay line in the README.
+- [x] Live demo: https://domino-jiie.onrender.com/ (Render free; Replay, Demo with approval, all views, reset and the Cypher drawer checked on the live copy on Oct 18). Open it a minute before judging: it sleeps after 15 idle minutes.
 - [x] Demo video: https://youtu.be/H7s2jJbKR4Y (unlisted, checked in a logged-out window; also in the README).
 - [x] Video made from a real Claude Code run (`video/renders/domino-demo-v2.mp4`, 2:40, AI voice): tool calls, tier-1 vs multi-tier, the approval pause, verification and a dated memory recall.
 - [x] Review wording in `docs/AI_DISCLOSURE.md` confirmed by the author (Oct 18).

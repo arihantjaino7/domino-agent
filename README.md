@@ -10,7 +10,7 @@
 
 DOMINO follows supply-chain dependencies, tests recovery plans in FalkorDB copies and executes the plan a human approves.
 
-Live demo: no hosted copy. Run it locally (section 10) and choose **Replay** to watch a recorded real Claude Code run, with no API key and no change to the graph. Demo video: [youtu.be/H7s2jJbKR4Y](https://youtu.be/H7s2jJbKR4Y) (2:40, AI voiceover, real Claude Code run).
+Live demo: **[domino-jiie.onrender.com](https://domino-jiie.onrender.com/)** (free instance: after 15 idle minutes the first visit takes about a minute to wake it). Choose **Replay** to watch a recorded real Claude Code run, with no API key and no change to the graph, or **Demo** for the free scripted run with the real tools, approval and verification. All visitors share one world; **Reset the world** puts it back. Demo video: [youtu.be/H7s2jJbKR4Y](https://youtu.be/H7s2jJbKR4Y) (2:40, AI voiceover, real Claude Code run).
 
 ## 2. The problem
 

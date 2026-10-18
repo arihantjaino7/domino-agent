@@ -32,6 +32,7 @@ export function RunPanel({ compact }: { compact?: boolean }) {
   const st = useStore()
   const m = useModel()
   const working = m.phase === 'running' || m.phase === 'approving' || st.busy
+  const noKey = st.mode === 'api' && !st.claudeApi
   const short: Record<string, string> = { monsoon: 'Flood', panel_fire: 'Factory fire', non_event: 'Port strike' }
   const runLabel = st.mode === 'mcp' ? 'Watch Claude Code' : st.mode === 'api' ? 'Run with Claude' : st.mode === 'replay' ? 'Play the recording' : 'Run the demo'
   if (st.mode === 'replay') return <ReplayPanel compact={compact} working={working} label={runLabel} />
@@ -49,13 +50,14 @@ export function RunPanel({ compact }: { compact?: boolean }) {
         </div>
       )}
       {!compact && st.mode === 'mcp' && <McpGuide />}
+      {!compact && noKey && <p className="plain">This copy has no Claude API key, so Claude cannot run in the backend here. Choose <b>Replay</b> to watch a recorded real Claude Code run, <b>Demo</b> for the free scripted run, or <b>Claude Code</b> to drive DOMINO from your own Claude Code.</p>}
       <div className="start-actions">
         {compact && st.mode !== 'mcp' && (
           <select className="pick" aria-label="Disruption to simulate" value={st.scenario} disabled={working} onChange={(e) => st.setScenario(e.target.value)}>
             {st.scenarios.map((s) => <option key={s.id} value={s.id}>{s.title}</option>)}
           </select>
         )}
-        <button type="button" className="btn btn-accent" disabled={working} onClick={() => void st.run()}>{working ? 'Running' : runLabel}</button>
+        <button type="button" className="btn btn-accent" disabled={working || noKey} title={noKey ? 'This copy has no Claude API key' : undefined} onClick={() => void st.run()}>{working ? 'Running' : runLabel}</button>
         <InjectMenu disabled={working} />
         <button type="button" className="btn btn-ghost" disabled={working} onClick={() => void st.reset()} title="Undo every disruption and order: back to the starting world">Reset the world</button>
         <Progress />

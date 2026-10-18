@@ -21,7 +21,7 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
 export const api = {
   graph: () => req<WorldGraph>('/api/graph'),
   summary: () => req<Summary>('/api/world/summary'),
-  scenarios: () => req<{ scenarios: Scenario[] }>('/api/scenarios').then((r) => r.scenarios),
+  scenarios: () => req<{ scenarios: Scenario[]; claude_api?: boolean }>('/api/scenarios'),
   places: () => req<Places>('/api/world/places'),
   replays: () => req<{ replays: ReplayMeta[] }>('/api/replays').then((r) => r.replays),
   replay: (id: string) => req<Recording>(`/api/replays/${encodeURIComponent(id)}`),

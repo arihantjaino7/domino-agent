@@ -79,6 +79,8 @@ interface State {
   graph: WorldGraph | null
   summary: Summary | null
   scenarios: Scenario[]
+  /** false when the server has no ANTHROPIC_API_KEY, so Claude API mode cannot run */
+  claudeApi: boolean
   places: Places | null
   scenario: string
   mode: Mode
@@ -311,7 +313,7 @@ function initialTheme(): 'light' | 'dark' {
 }
 
 export const useStore = create<State>((set, get) => ({
-  graph: null, summary: null, scenarios: [], places: null, scenario: 'monsoon', mode: 'scripted', theme: initialTheme(),
+  graph: null, summary: null, scenarios: [], claudeApi: true, places: null, scenario: 'monsoon', mode: 'scripted', theme: initialTheme(),
   replays: [], replayId: null, recording: null,
   runId: null, runStatus: 'idle', events: [], steps: [], pendingDecision: null, selected: null, hoverEvidence: null,
   error: null, busy: false, ready: false, derived: EMPTY,
@@ -327,8 +329,8 @@ export const useStore = create<State>((set, get) => ({
           await new Promise((r) => setTimeout(r, 1500))
         }
       }
-      const [graph, summary, scenarios, places] = all
-      set({ graph, summary, scenarios, places, error: null, ready: true, derived: derive(graph, summary, get().steps, get().events) })
+      const [graph, summary, { scenarios, claude_api }, places] = all
+      set({ graph, summary, scenarios, claudeApi: claude_api ?? true, places, error: null, ready: true, derived: derive(graph, summary, get().steps, get().events) })
       api.replays().then((replays) => set((s) => ({ replays, replayId: s.replayId ?? replays[0]?.id ?? null })), () => { /* replays are optional */ })
     } catch (e) {
       set({ ready: true, error: `Could not load the world. ${String((e as Error).message ?? e)}` })
@@ -361,6 +363,11 @@ export const useStore = create<State>((set, get) => ({
   setHoverEvidence: (hoverEvidence) => set({ hoverEvidence }),
 
   run: async () => {
+    // Without a key the backend refuses a Claude API run; check first, so the shared world is not reset for nothing.
+    if (get().mode === 'api' && !get().claudeApi) {
+      useToasts.getState().push('This copy has no Claude API key. Use Replay, Demo or Claude Code instead.')
+      return
+    }
     unsubscribe?.()
     stopReplay()
     set({ busy: true, error: null, events: [], steps: [], pendingDecision: null, runStatus: 'running', selected: null })
@@ -415,7 +422,8 @@ export const useStore = create<State>((set, get) => ({
         if (ev.type === 'action.executed' || ev.type === 'run.completed') void get().refresh()
       })
     } catch (e) {
-      set({ busy: false, runStatus: 'failed', error: String((e as Error).message ?? e) })
+      // No run was started (refused, rate-limited or unreachable): back to idle, not stuck on "reading the alert".
+      set({ busy: false, runStatus: 'idle', error: String((e as Error).message ?? e) })
     }
   },
   approve: async () => {

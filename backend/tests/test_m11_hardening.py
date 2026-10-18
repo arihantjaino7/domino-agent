@@ -267,3 +267,15 @@ def test_a_lesson_without_entity_ids_is_refused(ctx):
         with pytest.raises(T.ToolInputError, match="never be recalled"):
             T.record_lessons(ctx, "INC-0001", [bad])
     assert memory.list_lessons(MEM) == []
+
+def test_scenarios_say_whether_claude_api_mode_can_run(monkeypatch):
+    # The war room disables "Run with Claude" on a copy without a key, instead of resetting the world and failing.
+    from fastapi.testclient import TestClient
+
+    from domino.api.main import app
+    with TestClient(app) as c:
+        monkeypatch.setattr(settings, "anthropic_api_key", "")
+        assert c.get("/api/scenarios").json()["claude_api"] is False
+        assert c.post("/api/runs", json={"scenario": "monsoon"}).status_code == 400
+        monkeypatch.setattr(settings, "anthropic_api_key", "sk-test")
+        assert c.get("/api/scenarios").json()["claude_api"] is True
