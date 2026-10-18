@@ -243,7 +243,7 @@ export function OverviewView({ go }: { go: (v: ViewId) => void }) {
 
       {waiting && (
         <div className="card" style={{ marginBottom: 16 }}><div className="card-b">
-          <div className="side-h"><h2>Now paste the alert into Claude Code</h2><span className="sub">Claude Code drives DOMINO</span></div>
+          <div className="side-h"><h2>Now paste the alert into Claude Code</h2><button type="button" className="btn btn-ghost" onClick={() => st.stopWatching()}>Stop watching</button></div>
           <McpGuide />
         </div></div>
       )}

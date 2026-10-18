@@ -50,4 +50,10 @@ def _memory(source: str) -> dict[str, Any]:
 
 @router.get("/memory")
 async def get_memory(source: Literal["real", "demo"] = "real") -> dict[str, Any]:
+    # A reset replaces the live world for a moment; reading it then fails, so wait briefly and read again.
+    for _ in range(4):
+        try:
+            return await asyncio.to_thread(_memory, source)
+        except QueryError:
+            await asyncio.sleep(0.5)
     return await asyncio.to_thread(_memory, source)

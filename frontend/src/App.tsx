@@ -104,7 +104,8 @@ function TopBar({ go, navClass, navTitle, open }: { go: (v: ViewId) => void; nav
   const setMode = useStore((s) => s.setMode)
   const busy = useStore((s) => s.busy)
   const guided = useStore((s) => s.experience === 'guided')
-  const working = m.phase === 'running' || m.phase === 'approving' || busy
+  // Claude Code runs outside this page, so watching it never locks the modes (only placing orders does).
+  const working = mode === 'mcp' ? m.phase === 'approving' : m.phase === 'running' || m.phase === 'approving' || busy
   const inc = m.d.declared?.incident_id
   const summaryIncidents = useStore((s) => s.summary?.incidents?.length ?? 0)
   const state =

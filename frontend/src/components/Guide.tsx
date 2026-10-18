@@ -16,15 +16,34 @@ import { useToasts } from '../lib/toasts'
 type Ctx = { m: Model; view: ViewId; runId: string | null; late: string[] }
 type Step = {
   view: ViewId
+  /** index into CHAPTERS */
+  chapter: number
   title: (c: Ctx) => string
-  body: (c: Ctx) => string
+  /** what the visitor is looking at, in plain words with the real numbers */
+  see: (c: Ctx) => string
+  /** one line on why it matters */
+  why?: (c: Ctx) => string
+  /** exactly one thing to do next */
+  move: (c: Ctx) => string
+  /** a short label pinned to the highlighted part of the page */
+  pin?: string
   target?: () => Element | null
+  /** dim the rest of the page so the highlighted part stands out */
+  dim?: boolean
+  /** show DOMINO's seven steps as a live checklist */
+  checklist?: boolean
   /** the guide moves on by itself once this is true */
   done?: (c: Ctx) => boolean
-  /** shown while the visitor or DOMINO still has to do something */
+  /** shown instead of the move while DOMINO is still busy */
   waiting?: (c: Ctx) => string | null
   action?: (c: Ctx) => { label: string; run: () => void } | null
   next?: boolean
+}
+
+const CHAPTERS = ['The flood', 'The impact', 'The hidden cause', 'Your decision', 'Memory', 'Prevention']
+const PLAIN: Record<string, string> = {
+  detect: 'Read the flood alert', trace: 'Follow the supply chain from the flood', impact: 'Find the orders that will really be late',
+  options: 'Look for other suppliers', simulate: 'Test 5 rescue plans on copies of the data', approve: 'Ask you to approve', verify: 'Check the result',
 }
 
 const q = (sel: string) => () => [...document.querySelectorAll(sel)].find((e) => e.getBoundingClientRect().width > 0) ?? null
@@ -40,6 +59,8 @@ export function Guide({ view, go }: { view: ViewId; go: (v: ViewId) => void }) {
   const [rect, setRect] = useState<DOMRect | null>(null)
   // made smaller on this step; the next step opens the card again
   const [minAt, setMinAt] = useState<number | null>(null)
+  // phones show the short card; "What am I looking at?" opens the explanation for this step
+  const [moreAt, setMoreAt] = useState<number | null>(null)
   const guided = st.experience === 'guided'
   const step = st.guideStep
 
@@ -47,55 +68,74 @@ export function Guide({ view, go }: { view: ViewId; go: (v: ViewId) => void }) {
   const late: string[] = (m.delivery?.pos ?? []).filter((p: any) => p.days_late > 0).map((p: any) => p.site_name ?? p.site)
   const ctx: Ctx = { m, view, runId: st.runId, late }
   const startDemo = () => { st.setMode('scripted'); st.setScenario('monsoon'); void st.run() }
+  const factories = (m.plants ?? []).map((p: any) => m.short(p.plant)).filter(Boolean)
 
   const steps: Step[] = [
-    { view: 'overview', target: q('.ov-hero'),
-      title: () => (st.guideMax > 0 ? 'Pick up where you left off' : 'A quiet morning at Kestrel Devices'),
-      body: (c) => `${st.guideMax > 0 ? 'Your earlier run ended when the page reloaded; everything you opened stays open. ' : ''}Kestrel builds laptops from ${c.m.totals?.orders ?? 117} customer orders, all on time. Its dashboard watches only the suppliers it pays directly. Now a monsoon floods central Thailand.`,
+    { view: 'overview', chapter: 0, target: q('.ov-hero'), pin: 'All zeros: nothing is wrong yet', dim: true,
+      title: () => (st.guideMax > 0 ? 'Pick up where you left off' : 'Meet Kestrel Devices'),
+      see: (c) => `${st.guideMax > 0 ? 'The page reloaded, so the earlier run is gone; everything you opened stays open. ' : ''}Kestrel Devices is a (made-up) laptop maker with ${factories.length ? `${factories.length} factories` : 'three factories'} and ${c.m.totals?.orders ?? 117} customer orders. The highlighted numbers are all zero: every order is on time.`,
+      why: () => 'Kestrel\'s normal dashboard only watches the suppliers it pays directly. Let\'s see what that misses.',
+      move: () => 'Press "Start the flood". A monsoon will shut down factories in central Thailand.',
       action: () => ({ label: 'Start the flood', run: () => { startDemo(); advance() } }) },
-    { view: 'overview', target: q('.map-card'),
-      title: () => 'DOMINO is investigating',
-      body: () => 'It reads the alert, finds the flooded places in the graph, and follows supply paths from the flood to your suppliers, factories and customer orders. Try the "Tier-1 view" switch above the map: that is all a normal dashboard sees.',
-      waiting: () => { const s = STEPS.find((x) => x.id === currentStep(st)); return s ? `Working on step ${Number(s.num)} of 7: ${s.title}` : 'Starting' },
+    { view: 'overview', chapter: 0, target: q('.map-card'), pin: 'Watch the map fill in', checklist: true,
+      title: () => 'DOMINO is investigating on its own',
+      see: () => 'DOMINO\'s AI agent received the flood alert and is now working through 7 steps by itself, using the supply-chain database. The checklist below ticks off each step; the map lights up as it finds problems.',
+      why: () => 'It never guesses: every number it shows comes from a database query you can inspect later.',
+      move: () => 'Nothing to do. Wait about 30 seconds.',
+      waiting: () => 'DOMINO is working (about 30 seconds)',
       done: (c) => c.m.phase === 'awaiting' },
-    { view: 'overview', target: q('.ov-nums'),
-      title: () => `${T?.exposed ?? '—'} orders in danger, ${T?.projected_late ?? '—'} really late`,
-      body: () => 'In danger means an order depends on the flooded factory somewhere upstream. Late means its factory runs out of parts before the flood is over. DOMINO acts on the late ones and shows the fees at stake.',
-      action: () => ({ label: 'Show me how it spread', run: () => go('chain') }),
+    { view: 'overview', chapter: 1, target: q('.ov-nums'), pin: 'These three numbers', dim: true,
+      title: () => `${T?.exposed ?? '—'} orders are in danger, but only ${T?.projected_late ?? '—'} will really be late`,
+      see: () => `"In danger" (${T?.exposed ?? '—'}) = orders that need parts coming from the flooded area. "Will be late" (${T?.projected_late ?? '—'}) = the ones whose factory runs out of parts before the flood is over. Stock covers the rest.`,
+      why: () => `So DOMINO focuses on the ${T?.projected_late ?? '—'} that really need help: ${usd(T?.penalty_exposure_cents)} in late fees if nobody acts.`,
+      move: () => 'Press "Show me why" to see where the problem really comes from.',
+      action: () => ({ label: 'Show me why', run: () => go('chain') }),
       done: (c) => c.view === 'chain' },
-    { view: 'chain', target: q('.view.on .card'),
-      title: () => 'The supplier nobody was watching',
-      body: (c) => `${c.m.site ? c.m.short(c.m.site.id) : 'The flooded factory'} is not on Kestrel's supplier list, yet ${plural(c.m.d.exposedTier1.length, 'of your suppliers', 'of your suppliers')} depend on it. That is why the dashboard saw nothing. Hover a company to follow its path.`,
+    { view: 'chain', chapter: 2, target: q('.view.on .card'), pin: 'Read it left to right',
+      title: () => 'The flooded factory is not even Kestrel\'s supplier',
+      see: (c) => `In the first column, "Upstream makers", is ${c.m.site ? c.m.short(c.m.site.id) : 'the flooded factory'}, marked stopped. Kestrel never buys from it. But it sells parts to ${plural(c.m.d.exposedTier1.length, 'company', 'companies')} in the next column, "Direct suppliers", and they supply "Our factories". The lines show the path.`,
+      why: () => 'Kestrel\'s dashboard only sees the "Direct suppliers" column, so it said "no problem". DOMINO found the hidden link by following the graph.',
+      move: () => 'Point at (or tap) a box to light up its path, then press Next.',
       next: true },
-    { view: 'overview', target: byText('button', /^Approve plan$/),
-      title: () => 'Your call',
-      body: (c) => {
+    { view: 'overview', chapter: 3, target: byText('button', /^Approve plan$/), pin: 'Press this', dim: true,
+      title: () => 'DOMINO found a fix. You decide',
+      see: (c) => {
         const rec = c.m.rec, plan = c.m.d.plan
-        return `DOMINO tested five plans in copies of the graph. It recommends buying from ${plural(c.m.suppliersInPlan.length, 'other supplier')}${plan?.spend_cents != null ? ` for ${usd(plan.spend_cents)}` : ''}${rec ? `, which protects ${rec.protected_projected} of the ${T?.projected_late ?? '—'} late orders` : ''}. Nothing is bought until a person approves.`
+        return `It tested 5 rescue plans on copies of the database. Its pick: buy from ${plural(c.m.suppliersInPlan.length, 'other supplier')}${plan?.spend_cents != null ? ` for ${usd(plan.spend_cents)}` : ''}${rec ? `. That saves ${rec.protected_projected} of the ${T?.projected_late ?? '—'} late orders` : ''}.`
       },
-      waiting: () => 'Your turn: press Approve plan',
+      why: () => 'The AI cannot buy anything by itself. Only your click places the orders.',
+      move: () => 'Press "Approve plan" (highlighted).',
       done: (c) => c.m.executed },
-    { view: 'shipments', target: q('.ff'),
-      title: () => 'Orders placed. Now let time pass',
-      body: () => 'The purchase orders exist, but no parts have arrived yet: those orders are protected on paper only. Fast-forward to delivery to see which suppliers arrive on time and which come in late.',
-      waiting: (c) => (c.m.d.verify ? 'Your turn: press Fast-forward to delivery' : 'DOMINO is running its safety checks'),
+    { view: 'shipments', chapter: 3, target: q('.ff'), pin: 'Press the button here', dim: true,
+      title: () => 'Orders placed. Now jump ahead in time',
+      see: () => 'The purchase orders now exist, but no parts have arrived yet. Fast-forward simulates the next weeks: each new supplier delivers on time or late.',
+      why: () => 'Real suppliers are not perfect, and DOMINO will remember who was late.',
+      move: () => 'Press "Fast-forward to delivery" (highlighted).',
+      waiting: (c) => (c.m.d.verify ? null : 'DOMINO is double-checking the orders it placed (a few seconds)'),
       done: (c) => !!c.m.delivery },
-    { view: 'agent', target: () => q('.learned')() ?? cardWith(/What DOMINO remembers/)(),
-      title: () => 'DOMINO learned something',
-      body: (c) => `${c.late.length ? `${c.late.slice(0, 2).join(' and ')} came in late.` : 'Every supplier arrived on time.'} DOMINO wrote how each supplier did to its memory graph, which survives a reset of the world. Run the same flood again and watch the plan change.`,
+    { view: 'agent', chapter: 4, target: () => q('.learned')() ?? cardWith(/What DOMINO remembers/)(), pin: 'Trust score: before → after', dim: true,
+      title: () => 'DOMINO remembered who was late',
+      see: (c) => `${c.late.length ? `${c.late.slice(0, 2).join(' and ')} delivered late.` : 'Every supplier delivered on time.'} The highlighted list shows each supplier's trust score before → after (lower means trusted less).`,
+      why: () => 'This memory survives even when the world is reset, so the next plan can use it.',
+      move: () => 'Press "Run the same flood again" and see if DOMINO chooses differently.',
       action: () => ({ label: 'Run the same flood again', run: () => { startDemo(); advance() } }) },
-    { view: 'agent', target: byText('summary', /memory/i),
-      title: () => 'Same flood, a different plan',
-      body: () => 'This time the balanced plan ranks suppliers with what DOMINO learned. The box below the plan says which ranking changed and why, with the purchase order behind it.',
-      waiting: (c) => (c.m.phase === 'awaiting' ? null : 'DOMINO is planning again'),
+    { view: 'agent', chapter: 4, target: byText('summary', /memory/i), pin: 'Why the plan changed', dim: true,
+      title: () => 'Same flood, smarter plan',
+      see: () => 'DOMINO planned again for the same flood. The highlighted box, "Memory changed this plan", names the supplier it now trusts less and what it buys instead.',
+      why: () => 'That is the difference between an AI that answers and one that learns.',
+      move: () => 'Read the highlighted box, then press Next.',
+      waiting: (c) => (c.m.phase === 'awaiting' ? null : 'DOMINO is planning again (about 30 seconds)'),
       next: true },
-    { view: 'xray', target: q('.view.on h1'),
-      title: () => 'Find the next flood first',
-      body: () => 'Risk X-ray stops every upstream site on its own, in copies of the graph, and ranks the damage. Hidden weak points are companies you have no contract with that would still hurt you. Click one, then "Rehearse this disruption".',
+    { view: 'xray', chapter: 5, target: q('.view.on h1'),
+      title: () => 'Find weak spots before the next disaster',
+      see: () => 'Risk X-ray pretends each supplier site breaks, one at a time, and counts how many orders would be late. "Hidden" means Kestrel has no contract with that site, so a normal dashboard cannot see it.',
+      why: () => 'Now risks can be fixed before a flood, not after.',
+      move: () => 'Read the highlighted headline: the site that would hurt Kestrel most, though Kestrel never buys from it. Then press Next.',
       next: true },
-    { view: 'overview', target: q('.top-right'),
-      title: () => 'Everything is open',
-      body: () => 'You have seen the whole loop: trace, impact, a human decision, delivery and memory. The full version adds Live alerts with real disasters, Claude Code mode to drive DOMINO from your own terminal, and Reset the world for a clean start.',
+    { view: 'overview', chapter: 5, target: q('.xp'), pin: 'Switch here any time',
+      title: () => 'You have seen the whole story',
+      see: (c) => `Flood → hidden cause → your decision → delivery → memory → prevention. All of it ran on real tools and a real graph database.${c.m.phase === 'awaiting' ? ' The second plan (from the re-run) is still waiting on the right; approving it is up to you.' : ''}`,
+      move: () => 'Press "Open the full version" to explore freely, including real disaster alerts and connecting your own Claude Code.',
       action: () => ({ label: 'Open the full version', run: () => st.setExperience('free') }) },
   ]
   const cur = guided ? steps[Math.min(step, LAST_STEP)] : null
@@ -108,7 +148,6 @@ export function Guide({ view, go }: { view: ViewId; go: (v: ViewId) => void }) {
   // Move to the step's view when the step changes.
   useEffect(() => { if (cur && view !== cur.view) go(cur.view) }, [step, guided]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Advance by itself when the visitor (or DOMINO) has done the thing.
   function advance() {
     const next = Math.min(step + 1, LAST_STEP)
     const opened = (Object.keys(OPENS_AT) as ViewId[]).filter((v) => OPENS_AT[v] === next && next > st.guideMax)
@@ -116,10 +155,11 @@ export function Guide({ view, go }: { view: ViewId; go: (v: ViewId) => void }) {
     if (opened.length) useToasts.getState().push(<span><b>Unlocked:</b> {opened.map((v) => VIEW_NAMES[v]).join(' and ')}</span>)
   }
 
+  // Advance by itself when the visitor (or DOMINO) has done the thing, after a short "done" moment.
   const isDone = cur?.done?.(ctx) ?? false
   useEffect(() => {
     if (!guided || !isDone) return
-    const t = window.setTimeout(() => advance(), 700)
+    const t = window.setTimeout(() => advance(), 1300)
     return () => clearTimeout(t)
   }, [isDone, step, guided]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -130,8 +170,15 @@ export function Guide({ view, go }: { view: ViewId; go: (v: ViewId) => void }) {
       const r = cur.target?.()?.getBoundingClientRect()
       setRect(r && r.width > 0 ? r : null)
     }
-    const first = window.setTimeout(() => { cur.target?.()?.scrollIntoView({ block: 'center', behavior: 'smooth' }); find() }, 350)
-    const again = window.setInterval(find, 500)
+    const first = window.setTimeout(() => {
+      const el = cur.target?.() as HTMLElement | null | undefined
+      // on a phone the card covers the lower half, so bring the target to the top, under the bar
+      const phone = window.innerWidth <= 760
+      if (el && phone) el.style.scrollMarginTop = '96px'
+      el?.scrollIntoView({ block: phone ? 'start' : 'center', behavior: 'smooth' })
+      find()
+    }, 350)
+    const again = window.setInterval(find, 400)
     window.addEventListener('resize', find)
     window.addEventListener('scroll', find, true)
     return () => { clearTimeout(first); clearInterval(again); window.removeEventListener('resize', find); window.removeEventListener('scroll', find, true) }
@@ -143,9 +190,12 @@ export function Guide({ view, go }: { view: ViewId; go: (v: ViewId) => void }) {
   const wait = failed ? null : cur.waiting?.(ctx) ?? null
   const action = failed ? { label: 'Start the flood again', run: startDemo } : cur.action?.(ctx) ?? null
   const showRing = rect && !min && !(cur.done && isDone)
-  const you = !!wait && wait.startsWith('Your turn')
   // keep the card off what it points at: when the target sits on the right, the card moves to the left
   const side = rect && rect.left + rect.width / 2 > window.innerWidth * 0.55 && window.innerWidth > 760 ? 'left' : ''
+
+  // DOMINO's seven steps, ticked off as the run reports them
+  const curId = currentStep(st)
+  const curIdx = m.phase === 'awaiting' || m.phase === 'approving' || m.phase === 'done' ? STEPS.findIndex((s) => s.id === 'approve') : STEPS.findIndex((s) => s.id === curId)
 
   if (min) {
     return (
@@ -156,16 +206,40 @@ export function Guide({ view, go }: { view: ViewId; go: (v: ViewId) => void }) {
   }
   return (
     <>
-      {showRing && <div className="guide-ring" style={{ left: rect.left - 6, top: rect.top - 6, width: rect.width + 12, height: rect.height + 12 }} aria-hidden />}
-      <aside className={`guide-card ${side}`} role="dialog" aria-live="polite" aria-label="Guide">
+      {showRing && (
+        <div className={`guide-ring ${cur.dim ? 'dim' : ''}`} style={{ left: rect.left - 6, top: rect.top - 6, width: rect.width + 12, height: rect.height + 12 }} aria-hidden>
+          {cur.pin && <span className={`guide-pin ${rect.top < 90 ? (rect.height > 240 ? 'inside' : 'below') : ''}`}>{cur.pin}</span>}
+        </div>
+      )}
+      <aside className={`guide-card ${side} ${moreAt === step || failed ? 'more' : ''}`} role="dialog" aria-live="polite" aria-label="Guide">
         <div className="guide-bar"><i style={{ width: `${((step + (isDone ? 1 : 0)) / LAST_STEP) * 100}%` }} /></div>
         <div className="guide-top">
-          <span className="sub">Guided · step {step + 1} of {LAST_STEP + 1}</span>
+          <span className="guide-chap">Chapter {cur.chapter + 1} of {CHAPTERS.length} · {CHAPTERS[cur.chapter]}</span>
+          <span className="guide-step">{step + 1}/{LAST_STEP + 1}</span>
           <button type="button" className="guide-x" aria-label="Make the guide smaller" title="Make smaller" onClick={() => setMinAt(step)}>–</button>
         </div>
         <h3>{failed ? 'The run stopped' : cur.title(ctx)}</h3>
-        <p>{failed ? 'Something interrupted the run (another visitor may have reset the shared world). Start it again; nothing you opened closes.' : cur.body(ctx)}</p>
-        {wait && <div className={`guide-wait ${you ? 'you' : ''}`}>{you ? <i className="guide-you" /> : <i className="spin" />}{you ? wait.replace(/^Your turn: p/, 'P') : wait}</div>}
+        <div className="guide-sec"><span className="guide-k">What you are seeing</span>
+          <p>{failed ? 'Something interrupted the run (another visitor may have reset the shared world). Nothing you opened closes.' : cur.see(ctx)}</p></div>
+        {cur.why && !failed && <div className="guide-sec"><span className="guide-k">Why it matters</span><p>{cur.why(ctx)}</p></div>}
+        <button type="button" className="guide-more" aria-expanded={moreAt === step} onClick={() => setMoreAt(moreAt === step ? null : step)}>
+          {moreAt === step ? 'Show less' : 'What am I looking at?'}
+        </button>
+        {cur.checklist && !failed && (
+          <ol className="guide-check" aria-label="What DOMINO is doing">
+            {STEPS.map((s, i) => {
+              const state = isDone || i < curIdx ? 'done' : i === curIdx ? 'now' : 'todo'
+              return <li key={s.id} className={state}><i />{PLAIN[s.id] ?? s.title}</li>
+            })}
+          </ol>
+        )}
+        <div className={`guide-move ${isDone ? 'ok' : wait ? 'busy' : 'you'}`}>
+          {isDone
+            ? <><i className="guide-tick" />Done. Moving on…</>
+            : wait
+              ? <><i className="spin" />{wait}</>
+              : <><span className="guide-k">Your move</span><span>{failed ? 'Press "Start the flood again".' : cur.move(ctx)}</span></>}
+        </div>
         <div className="guide-nav">
           {step > 0 && <button type="button" className="btn btn-ghost" onClick={() => st.setGuideStep(step - 1)}>Back</button>}
           {action

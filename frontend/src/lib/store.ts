@@ -119,6 +119,7 @@ interface State {
   refresh: () => Promise<void>
   setScenario: (s: string) => void
   setMode: (m: Mode) => void
+  stopWatching: () => void
   setTheme: (t: 'light' | 'dark') => void
   select: (s: StepId | null) => void
   setHoverEvidence: (id: string | null) => void
@@ -382,14 +383,21 @@ export const useStore = create<State>((set, get) => ({
   setMode: (mode) => {
     const was = get().mode
     if (mode === was) return
-    if (was === 'replay' || mode === 'replay') {
-      // Entering or leaving a recording: clear the screen and show the live world again.
+    if (was === 'replay' || mode === 'replay' || (was === 'mcp' && get().runStatus !== 'idle')) {
+      // Entering or leaving a recording, or leaving a Claude Code run that this page only watches:
+      // clear the screen and show the live world again.
       stopReplay(); unsubscribe?.(); unsubscribe = null
       set({ mode, recording: null, runId: null, runStatus: 'idle', events: [], steps: [], pendingDecision: null, selected: null })
       void get().refresh()
       return
     }
     set({ mode })
+  },
+  stopWatching: () => {
+    // The page stops following the Claude Code run; the run itself (outside this page) is not touched.
+    unsubscribe?.(); unsubscribe = null
+    set({ runId: null, runStatus: 'idle', events: [], steps: [], pendingDecision: null, selected: null })
+    void get().refresh()
   },
   setReplay: (replayId) => set({ replayId }),
   setTheme: (theme) => {
@@ -485,7 +493,11 @@ export const useStore = create<State>((set, get) => ({
     }
     const { runId, pendingDecision } = get()
     if (!runId) return
-    try { await api.reject(runId, feedback, pendingDecision) } catch (e) { set({ error: String((e as Error).message ?? e) }) }
+    // The refused plan can no longer be approved: lock Approve now, not when the stream catches up.
+    set({ runStatus: 'running', pendingDecision: null })
+    try { await api.reject(runId, feedback, pendingDecision) } catch (e) {
+      set({ error: String((e as Error).message ?? e), runStatus: 'awaiting_approval', pendingDecision })
+    }
   },
   deliver: async () => {
     const { runId, mode } = get()
